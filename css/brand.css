@@ -1,0 +1,163 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* Identidade compartilhada com EbenFamily / EbenSystem. */
+:root {
+  color-scheme: light;
+  --bg: #f7f9fc;
+  --surface: #ffffff;
+  --ink: #17212b;
+  --muted: #667788;
+  --primary: #2ecc71;
+  --primary-dark: #27ae60;
+  --accent: #1d6fd8;
+  --line: #dde5ec;
+  --danger: #ff9292;
+  --navy: #0b2545; --gradient: linear-gradient(110deg,#0b2545,#1d6fd8);
+  --shadow: 0 18px 55px #0b254509;
+}
+body { font-family: Inter,'Segoe UI',sans-serif; line-height: 1.6; }
+h1,h2,h3,.hero h1,.section h2,.detail h1,.panel h1,.panel h2 { font-family: Inter,'Segoe UI',sans-serif; letter-spacing: -.04em; line-height: 1.15; }
+.header { background: #ffffffed; }
+.header-inner { height: 88px; position: relative; }
+.logo { gap: 12px; }
+.logo-mark { position: relative; width: 42px; height: 42px; background: var(--navy); color: #ffffff; font-size: 34px; font-family: Inter,'Segoe UI',sans-serif; border-radius: 12px; line-height: 1; }
+.brand-dot { width: 6px; height: 6px; border-radius: 50%; background: #ffffff; position: absolute; bottom: 9px; right: 7px; }
+.brand-name { font-family: Inter,'Segoe UI',sans-serif; font-size: 25px; letter-spacing: -1px; font-weight: 600; line-height: 1; }
+.brand-name strong { color: var(--primary); font-weight: 600; }
+.brand-name small { display: block; font-family: Inter,sans-serif; font-size: 8px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-top: 8px; }
+.nav { color: var(--muted); gap: 24px; }
+a:hover { color: var(--accent); }
+.btn { border-radius: 11px; font-size: 13px; min-height: 44px; }
+.btn-primary { background: var(--gradient); color: #ffffff; }
+.btn-primary:hover { background: var(--gradient); color: #ffffff; box-shadow: 0 6px 28px #1d6fd825; }
+.btn-outline { background: transparent; color: var(--ink); }
+.btn-outline:hover { border-color: var(--accent); }
+.eyebrow { font-size: 10px; color: var(--accent); letter-spacing: 1.8px; }
+.hero { background: radial-gradient(ellipse at 85% 35%,#1d6fd810,transparent 50%); padding: 75px 0; }
+.hero h1 { font-size: clamp(42px,5vw,66px); line-height: 1.08; letter-spacing: -3px; }
+.gradient-text { background: var(--gradient); background-clip: text; -webkit-background-clip: text; color: transparent; }
+.hero p { font-size: 15px; line-height: 1.9; }
+.hero-card { height: 460px; border: 1px solid #1d6fd84d; border-radius: 22px; padding: 10px; background: var(--surface); transform: none; }
+.hero-card img { border-radius: 14px; display: block; }
+.hero-badge { background: #fffffff2; border: 1px solid #1d6fd840; right: 20px; font-size: 13px; }
+.hero-badge strong { color: var(--primary); }
+.searchbar,.panel,.stat,.booking-card,.table { background: var(--surface); }
+.searchbar { grid-template-columns: 1.1fr 1fr 1fr; padding: 17px; }
+.searchbar > .btn { grid-column: 1/-1; }
+.field label { color: var(--muted); letter-spacing: .05em; }
+.field input,.field textarea { background: #f7f9fc; color: var(--ink); min-width: 0; }
+.field input:focus,.field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px #1d6fd814; }
+input::placeholder,textarea::placeholder { color: #7e92a7; }
+.section { padding: 65px 0; }
+.property-card { border-radius: 14px; }
+.property-card:hover { border-color: #1d6fd866; color: var(--ink); }
+.property-body { padding: 22px; }
+.price strong { color: var(--primary); }
+.price small { color: var(--muted); font-size: 11px; font-weight: 400; }
+.detail-description,.summary-row { color: var(--muted); }
+.summary-total { color: var(--ink); }
+.chip { background: #2ecc7112; color: #187743; font-size: 11px; border: 1px solid #2ecc7125; }
+.chip.warning { background: #f39c3d12; color: #8a570b; border-color: #f39c3d25; }
+.calendar-head,.table th { background: #f2f5f8; color: var(--muted); }
+.calendar-cell.disabled { background: #ffffff06; color: #748396; }
+.payment-option.active { background: #2ecc710c; }
+.success-icon { background: #2ecc7118; }
+.error { background: #ff929212; }
+.footer { background: #f2f5f8; }
+.footer strong { color: var(--primary); }
+.admin { padding-top: 38px; background: radial-gradient(ellipse at 65% 0,#1d6fd809,transparent 55%); }
+.admin > .container { max-width: 1320px; width: calc(100% - 64px); }
+.admin-layout { grid-template-columns: 215px minmax(0,1fr); gap: 28px; }
+.sidebar { background: var(--surface); border: 1px solid var(--line); padding: 22px 14px; border-radius: 14px; position: sticky; top: 110px; }
+.sidebar strong { font-size: 9px; letter-spacing: 2px; color: var(--muted); padding: 0 12px; }
+.sidebar a { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--muted); }
+.sidebar a.active,.sidebar a:hover { background: #2ecc710d; color: var(--primary); }
+.sidebar a.active { box-shadow: inset 2px 0 var(--primary); }
+.sidebar-note { border-top: 1px solid var(--line); margin: 30px 12px 0; padding-top: 20px; color: var(--muted); font-size: 11px; }
+.sidebar-note b { display: block; color: var(--ink); font-size: 13px; margin-bottom: 5px; }
+.admin-heading { margin-bottom: 30px; }
+.admin-heading h1 { font-size: clamp(30px,4vw,42px); margin: 12px 0; }
+.admin-heading p { margin: 0; font-size: 13px; }
+.admin-heading .chip { margin-bottom: 12px; }
+.stat { padding: 22px; border-radius: 14px; position: relative; overflow: hidden; }
+.stat:before { content: ''; position: absolute; left: 0; top: 22px; bottom: 22px; width: 2px; background: var(--gradient); }
+.stat strong { font-family: Inter,'Segoe UI',sans-serif; font-size: 33px; font-weight: 500; }
+.stat small { font-size: 12px; }
+.stat-note { display: block; color: var(--muted); font-size: 10px; margin-top: 8px; }
+.panel { border-radius: 14px; }
+.panel h2 { font-size: 21px; margin-top: 0; }
+.panel-heading { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 8px; }
+.panel-heading h2 { margin: 0; }
+.property-admin { padding: 18px 0; font-size: 13px; }
+.property-admin:last-child { border-bottom: 0; padding-bottom: 0; }
+.property-admin .muted { font-size: 11px; margin-top: 5px; }
+.table-wrap { overflow-x: auto; margin-top: 22px; }
+.table { border: 0; }
+.table th { text-transform: uppercase; font-size: 9px; letter-spacing: 1px; font-weight: 500; }
+.table td { font-size: 11px; white-space: nowrap; padding: 20px 12px; }
+.table td:first-child { color: var(--accent); }
+#adminCalendar .panel { background: #f7f9fc; }
+section[id],div[id] { scroll-margin-top: 110px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+@media(max-width:1000px) {
+  .admin-layout { grid-template-columns: 170px minmax(0,1fr); gap: 18px; }
+  .hero-grid { gap: 25px; }
+  .stats { gap: 10px; }
+  .stat { padding: 17px; }
+}
+@media(max-width:900px) {
+  .admin-layout { display: block; }
+  .sidebar { position: static; display: flex; flex-wrap: wrap; gap: 5px; padding: 10px; }
+  .sidebar strong,.sidebar-note { display: none; }
+  .sidebar a { margin: 0; }
+  .hero-card { transform: none; }
+}
+@media(max-width:600px) {
+  .header-inner { height: 78px; }
+  .brand-name { font-size: 21px; }
+  .mobile-menu { color: var(--ink); min-width: 44px; min-height: 44px; }
+  .nav.show-mobile { display: flex; position: absolute; top: 77px; left: 0; right: 0; flex-direction: column; align-items: stretch; background: #ffffff; padding: 20px; border: 1px solid var(--line); border-radius: 0 0 12px 12px; }
+  .hero { padding: 40px 0; }
+  .hero h1 { letter-spacing: -2px; }
+  .hero-card { height: 330px; }
+  .searchbar { grid-template-columns: 1fr; }
+  .section-head { align-items: flex-start; flex-direction: column; }
+  .admin > .container { width: calc(100% - 28px); }
+  .admin-heading h1 { font-size: 32px; }
+  .stats { grid-template-columns: 1fr; }
+  .stat { padding: 18px 22px; }
+  .stat strong { font-size: 30px; }
+  .panel { padding: 18px; }
+  .property-admin { flex-wrap: wrap; gap: 12px; }
+  .property-admin img { width: 65px; height: 60px; }
+  .property-admin .grow { min-width: 150px; }
+  .property-admin .btn { margin-left: auto; }
+  .footer-inner { flex-direction: column; gap: 12px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  html { scroll-behavior: auto; }
+  *,*::before,*::after { transition: none !important; }
+}
+/* Palette EbenFamily fournie comme référence produit. */
+h1,h2,h3,.brand-name { color: var(--navy); }
+.brand-dot { background: #f39c3d; }
+.btn-primary { background: #2ecc71; color: #071a33; }
+.btn-primary:hover { background: #27ae60; color: #071a33; box-shadow: 0 6px 20px #2ecc7126; }
+.sidebar { background: #0b2545; }
+.sidebar strong,.sidebar-note { color: #b6c7d7; }
+.sidebar a { color: #d8e3ee; }
+.sidebar a.active,.sidebar a:hover { color: #fff; background: #ffffff12; }
+.sidebar-note b { color: #fff; }
+.sidebar-note { border-color: #ffffff25; }
+.stat strong { color: var(--navy); }
+.stat:before { background: #2ecc71; }
+.stat:nth-child(2):before { background: #1d6fd8; }
+.stat:nth-child(3):before { background: #f39c3d; }
+.panel,.stat,.property-card { box-shadow: 0 4px 20px #0b254504; border-radius: 16px; }
+.hero { background: radial-gradient(ellipse at 85% 35%,#2ecc710c,transparent 55%),#f7f9fc; }
+.hero-badge strong,.price strong,.link { color: #187743; }
+.hero-badge { box-shadow: var(--shadow); }
+.footer strong { color: var(--navy); }
+.error { color: #a22b2b; }
+.eyebrow { color: #1d6fd8; }
+.demo-note { color: #667788; font-size: 11px; margin: 0 0 22px; }
