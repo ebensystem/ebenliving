@@ -69,7 +69,7 @@ onAuthStateChanged(auth, user => {
   authReady = true;
   if (document.querySelector('#adminProtected')) {
     if (!user) {
-      location.replace(`/admin-login?redirect=${encodeURIComponent('admin')}`);
+      location.replace(`/admin-login/?redirect=${encodeURIComponent('admin')}`);
       return;
     }
     user.getIdTokenResult().then(token => {
@@ -88,7 +88,7 @@ onAuthStateChanged(auth, user => {
         switchAccount.className = 'btn btn-outline mt';
         switchAccount.type = 'button';
         switchAccount.textContent = 'Sair e trocar de conta';
-        switchAccount.addEventListener('click', async () => { await signOut(auth); location.assign('/admin-login'); });
+        switchAccount.addEventListener('click', async () => { await signOut(auth); location.assign('/admin-login/'); });
         gate.append(' ', switchAccount);
         gate.hidden = false;
       }
@@ -109,7 +109,7 @@ onAuthStateChanged(auth, user => {
       document.querySelector('#reservationsAccessMessage').textContent = error.message;
     });
   }
-  if (user && location.pathname.endsWith('/admin-login')) {
+  if (user && location.pathname.replace(/\\/+$/, '').endsWith('/admin-login')) {
     user.getIdTokenResult().then(token => {
       if (token.claims.admin === true || (user.email?.toLowerCase() === ADMIN_EMAIL && user.emailVerified)) location.replace('/admin');
       else if (message) {
