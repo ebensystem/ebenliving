@@ -109,7 +109,7 @@ onAuthStateChanged(auth, user => {
       document.querySelector('#reservationsAccessMessage').textContent = error.message;
     });
   }
-  if (user && location.pathname.replace(/\\/+$/, '').endsWith('/admin-login')) {
+  if (user && location.pathname.replace(/\/+$/, '').endsWith('/admin-login')) {
     user.getIdTokenResult().then(token => {
       if (token.claims.admin === true || (user.email?.toLowerCase() === ADMIN_EMAIL && user.emailVerified)) location.replace('/admin');
       else if (message) {
