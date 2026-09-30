@@ -11,3 +11,101 @@ dialog{width:min(680px,calc(100% - 32px));max-height:90vh;border:1px solid var(-
 @media(max-width:900px){.hero-grid,.detail-grid{grid-template-columns:1fr}.hero-copy{max-width:640px}.hero-card{height:370px}.hero h1{font-size:52px}.admin-layout{display:block}.sidebar{position:static}.sidebar-note,.sidebar strong,.sidebar-note+a{display:none}.detail-grid{gap:30px}.booking-card{position:static}.detail-heading{align-items:start;flex-direction:column}.admin>.container{width:calc(100% - 36px)}.stats{grid-template-columns:repeat(3,1fr)}.host-banner{align-items:start;flex-direction:column}.grid{grid-template-columns:repeat(2,1fr)}.nav{display:none}.mobile-menu{display:block;color:var(--navy);width:44px;height:44px}.nav.show-mobile{display:flex;position:absolute;top:95px;left:0;right:0;flex-direction:column;align-items:stretch;background:white;padding:20px;border:1px solid var(--line);border-radius:0 0 12px 12px;box-shadow:0 15px 30px #0b254512}.header-inner{position:relative}}
 @media(max-width:600px){.container{width:calc(100% - 32px)}.header-inner{height:80px}.logo-image{width:230px;height:62px}.nav.show-mobile{top:79px}.living-hero{padding-top:32px}.hero h1{font-size:40px;letter-spacing:-1.7px}.hero p{font-size:13px}.eyebrow{font-size:8px}.hero-values{gap:15px;font-size:10px}.hero-card{height:280px}.hero-badge{left:12px;right:12px;bottom:12px;padding:12px}.hero-badge strong{font-size:11px}.hero-badge span{font-size:10px}.search-panel{padding:17px;margin-top:12px;transform:translateY(24px)}.search-main{grid-template-columns:1fr 1fr;gap:12px}.destination-field{grid-column:1/-1}.search-main .btn{grid-column:auto}.field input,.field select,.field textarea{font-size:14px;padding:11px 9px}.section{padding-top:64px}.section h2{font-size:26px}.section-head{gap:18px}.favorites-toggle{font-size:11px;padding:9px 12px}.filter-bar{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px}.filter-bar .field:first-child{grid-column:1/-1}.filter-bar .text-button{grid-column:1/-1;margin:0;text-align:center;padding:2px}.grid{grid-template-columns:1fr}.property-title{min-height:0}.property-image{height:245px}.living-promise{grid-template-columns:1fr;gap:20px}.promise-item h3{margin:8px 0}.promise-item p{margin-bottom:0}.host-banner{padding:25px;margin-bottom:35px}.host-banner h2{font-size:25px}.footer-inner{gap:25px}.detail{padding-top:28px}.detail h1{font-size:29px}.gallery{height:320px;gap:6px}.gallery-photo{border-radius:10px}.detail-grid h2{font-size:21px}.detail-intro h2{font-size:17px}.booking-card{padding:21px}.booking-card .form-grid{grid-template-columns:1fr 1fr}.checkout h1{font-size:29px}.checkout-steps{gap:12px;font-size:8px}.checkout-grid{grid-template-columns:1fr}.checkout-summary{grid-row:1}.trip-card{grid-template-columns:1fr;gap:18px}.trip-card>img{height:200px}.trip-actions{flex-wrap:wrap}.admin-heading h1{font-size:31px}.dashboard-toolbar{align-items:start;flex-direction:column;gap:14px}.stats{grid-template-columns:1fr}.stat{padding:17px 22px}.stat strong{font-size:30px}.panel-heading{flex-wrap:wrap;gap:12px}.property-admin img{width:65px;height:60px}.property-admin .grow{min-width:170px}.property-admin .btn{margin-left:auto}.reservation-filters{grid-template-columns:1fr}.availability-layout{gap:8px}.block-panel{padding:16px}.sidebar{gap:0;padding:8px}.sidebar a{font-size:10px;gap:6px;padding:10px}.dialog-head h2{font-size:20px}dialog{padding:20px}.dialog-actions{flex-wrap:wrap}.lightbox-controls{gap:8px;font-size:11px}.lightbox-controls .btn{padding:9px;font-size:11px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.gallery-photo img{transition:none}}
+
+/* Tema escuro EbenFamily: azul-marinho da marca com verde EbenLiving. */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #071a33;
+  --surface: #0b2545;
+  --ink: #edf4fb;
+  --muted: #b4c4d4;
+  --primary: #2ecc71;
+  --primary-dark: #27ae60;
+  --navy: #071a33;
+  --line: #29415d;
+  --danger: #ff8b8b;
+  --shadow: 0 14px 45px rgba(0, 0, 0, .28);
+}
+html[data-theme="dark"] body,
+html[data-theme="dark"] .admin { background: #071a33; color: #edf4fb; }
+html[data-theme="dark"] .header,
+html[data-theme="dark"] .footer,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .search-panel,
+html[data-theme="dark"] .property-card,
+html[data-theme="dark"] .booking-card,
+html[data-theme="dark"] .stat,
+html[data-theme="dark"] .table,
+html[data-theme="dark"] dialog,
+html[data-theme="dark"] .empty-state,
+html[data-theme="dark"] .trip-card,
+html[data-theme="dark"] .hero-badge,
+html[data-theme="dark"] .favorites-toggle { background-color: #0b2545; color: #edf4fb; }
+html[data-theme="dark"] .living-hero,
+html[data-theme="dark"] .hero,
+html[data-theme="dark"] .block-panel { background: #091f3a; }
+html[data-theme="dark"] .filter-bar,
+html[data-theme="dark"] .calendar-head,
+html[data-theme="dark"] .table th,
+html[data-theme="dark"] .block-panel { background-color: #102d50; }
+html[data-theme="dark"] .field input,
+html[data-theme="dark"] .field textarea,
+html[data-theme="dark"] .field select,
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select,
+html[data-theme="dark"] .btn-outline,
+html[data-theme="dark"] .favorite-button,
+html[data-theme="dark"] .calendar-cell,
+html[data-theme="dark"] .photo-tag { background-color: #102d50; color: #edf4fb; }
+html[data-theme="dark"] .header,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .search-panel,
+html[data-theme="dark"] .property-card,
+html[data-theme="dark"] .stat,
+html[data-theme="dark"] .table,
+html[data-theme="dark"] dialog,
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select,
+html[data-theme="dark"] .favorites-toggle,
+html[data-theme="dark"] .table td,
+html[data-theme="dark"] .table th,
+html[data-theme="dark"] .calendar,
+html[data-theme="dark"] .calendar-cell,
+html[data-theme="dark"] .block-panel { border-color: #29415d; }
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] .nav,
+html[data-theme="dark"] .property-title,
+html[data-theme="dark"] .price strong,
+html[data-theme="dark"] .summary-total,
+html[data-theme="dark"] .calendar-head,
+html[data-theme="dark"] .field input,
+html[data-theme="dark"] .field textarea,
+html[data-theme="dark"] .field select { color: #edf4fb; }
+html[data-theme="dark"] p,
+html[data-theme="dark"] .muted,
+html[data-theme="dark"] .property-location,
+html[data-theme="dark"] .property-meta,
+html[data-theme="dark"] .price small,
+html[data-theme="dark"] .price-caption,
+html[data-theme="dark"] .promise-item p,
+html[data-theme="dark"] .footer p,
+html[data-theme="dark"] .field label,
+html[data-theme="dark"] .calendar-weekday,
+html[data-theme="dark"] .amenity-item { color: #b4c4d4; }
+html[data-theme="dark"] .card-amenities span,
+html[data-theme="dark"] .calendar-cell.blank,
+html[data-theme="dark"] .calendar-cell.disabled { background-color: #183552; color: #c4d2df; }
+html[data-theme="dark"] .price,
+html[data-theme="dark"] .living-promise,
+html[data-theme="dark"] .detail-intro { border-color: #29415d; }
+html[data-theme="dark"] .btn-outline:hover,
+html[data-theme="dark"] .icon-button:hover { background-color: #183552; }
+html[data-theme="dark"] .theme-toggle { white-space: nowrap; }
+.theme-toggle { font-size: 11px; padding: 9px 12px; }
+@media (max-width: 600px) {
+  .theme-toggle { position: fixed; right: 16px; bottom: 16px; z-index: 30; box-shadow: 0 5px 18px #071a3340; }
+}
