@@ -1,0 +1,45 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>ebenLiving — testes de integração</title><style>body{font:14px system-ui}iframe{width:1440px;height:1000px;border:1px solid #ddd}pre{white-space:pre-wrap}</style><h1>Testes de integração</h1><pre id="results">Executando…</pre><iframe id="app" title="Aplicação em teste"></iframe><script>
+(async()=>{
+const frame=document.getElementById('app'),out=document.getElementById('results'),key='ebenliving:v1',backup=localStorage.getItem(key),logs=[];let total=0;
+const check=(ok,name)=>{if(!ok)throw Error(name);total++;logs.push('PASS '+name);out.textContent=logs.join('\n');};
+const load=url=>new Promise((resolve,reject)=>{frame.onload=()=>resolve(frame.contentWindow);frame.onerror=reject;frame.src='../'+url;});
+const find=id=>frame.contentDocument.getElementById(id);
+const action=(name)=>frame.contentDocument.querySelector(`[data-action="${name}"]`);
+const fire=(el,type)=>el.dispatchEvent(new frame.contentWindow.Event(type,{bubbles:true,cancelable:true}));
+const data=()=>JSON.parse(localStorage.getItem(key));
+try{
+localStorage.removeItem(key);
+let win=await load('index.html');
+check(frame.contentDocument.querySelectorAll('.property-card').length===3,'vitrine renderiza três acomodações');
+find('searchDestination').value='porto alegre';fire(find('searchForm'),'submit');check(frame.contentDocument.querySelectorAll('.property-card').length===1,'busca por destino');
+find('searchDestination').value='';find('searchGuests').value='8';fire(find('searchForm'),'submit');check(frame.contentDocument.querySelectorAll('.property-card').length===1,'filtro por hóspedes');
+action('favorite').click();check(data().favorites.length===1,'favorito persistido');
+win=await load('index.html?favorites=1');check(frame.contentDocument.querySelectorAll('.property-card').length===1,'favoritos sobrevivem à navegação');
+win=await load('imovel.html?id=casa-serra&checkIn=2030-10-20&checkOut=2030-10-23&guests=2');
+check(find('checkIn').value==='2030-10-20','datas preservadas no detalhe');check(find('bookingSummary').textContent.includes('1.260,00'),'total calculado corretamente');
+check(frame.contentDocument.querySelectorAll('.calendar-weekday').length===7,'calendário tem dias da semana');
+const before=find('detailCalendar').textContent;action('month').click();check(find('detailCalendar').textContent!==before,'navegação de mês');
+action('photo').click();check(find('appDialog').open,'galeria ampliada abre');action('next-photo').click();check(find('appDialog').textContent.includes('2 / 3'),'galeria navega');action('close').click();
+win=await load('checkout.html?property=casa-serra&checkIn=2030-10-20&checkOut=2030-10-23&guests=2');
+find('guestName').value='Teste Local';frame.contentDocument.querySelector('input[type=checkbox]').checked=true;fire(find('checkoutForm'),'submit');
+check(data().reservations.length===1&&data().reservations[0].status==='pendente','checkout salva solicitação pendente');check(find('checkoutContent').textContent.includes('Solicitação salva'),'confirmação visível');
+win=await load('checkout.html?property=casa-serra&checkIn=2030-10-21&checkOut=2030-10-24&guests=2');check(!find('checkoutForm'),'reserva sobreposta é recusada');
+win=await load('admin.html');find('reportMonth').value='2030-10';fire(find('reportMonth'),'change');check(find('statBookings').textContent==='1','indicador calculado a partir das reservas');
+action('confirm').click();find('confirmStatus').click();check(data().reservations[0].status==='confirmada','anfitrião confirma solicitação');check(find('statRevenue').textContent.includes('1.260,00'),'valor confirmado calculado');
+find('blockStart').value='2030-10-20';find('blockEnd').value='2030-10-22';fire(find('blockForm'),'submit');check(!data().properties[0].unavailable.includes('2030-10-20'),'bloqueio manual não sobrepõe reserva');
+find('blockStart').value='2030-11-01';find('blockEnd').value='2030-11-03';fire(find('blockForm'),'submit');check(data().properties[0].unavailable.includes('2030-11-02'),'bloqueio de período salvo');
+const unblock=frame.contentDocument.querySelector('[data-action=unblock][data-date="2030-11-01"]');unblock.click();check(!data().properties[0].unavailable.includes('2030-11-01'),'desbloqueio individual');
+action('edit').click();find('prop-price').value='450';fire(find('propertyForm'),'submit');check(data().properties[0].price===450,'edição de diária persistida');
+action('new').click();for(const [k,v]of Object.entries({title:'Acomodação de teste',city:'Curitiba',state:'PR',price:'200',cleaningFee:'50',guests:'2',bedrooms:'1',bathrooms:'1',description:'Teste de integração',images:'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c',amenities:'Wi-Fi, Piscina'}))find('prop-'+k).value=v;fire(find('propertyForm'),'submit');check(data().properties.length===4,'cadastro de nova acomodação');
+action('toggle').click();check(data().properties[0].active===false,'pausar anúncio');action('toggle').click();check(data().properties[0].active===true,'reativar anúncio');
+win=await load('reservas.html');check(frame.contentDocument.querySelectorAll('.trip-card').length===1,'minhas estadias apresenta solicitação');action('cancel').click();find('confirmStatus').click();check(data().reservations[0].status==='cancelada','cancelamento local');
+win=await load('checkout.html?property=casa-serra&checkIn=2030-10-20&checkOut=2030-10-23&guests=2');check(!!find('checkoutForm'),'cancelamento libera disponibilidade');
+win=await load('checkout.html?property=casa-serra&checkIn=2030-02-30&checkOut=2030-03-05');check(!find('checkoutForm'),'URL com data inválida recusada');
+frame.style.width='375px';
+for(const url of ['index.html','admin.html','imovel.html?id=casa-serra','reservas.html','login.html']){await load(url);check(frame.contentDocument.documentElement.scrollWidth<=375,'sem overflow mobile: '+url);}
+action('menu').click();check(frame.contentDocument.querySelector('.mobile-menu').getAttribute('aria-expanded')==='true','menu mobile abre');
+out.textContent=logs.join('\n')+'\nSUCCESS: '+total+' verificações de integração.';document.title='PASS — '+total+' testes';
+}catch(error){out.textContent=logs.join('\n')+'\nFAIL: '+error.message+'\n'+error.stack;document.title='FAIL';}
+finally{if(backup===null)localStorage.removeItem(key);else localStorage.setItem(key,backup);}
+})();
+</script></html>
