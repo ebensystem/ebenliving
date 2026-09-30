@@ -1,0 +1,50 @@
+[debug] [2026-09-29T23:07:21.346Z] ----------------------------------------------------------------------
+[debug] [2026-09-29T23:07:21.350Z] Command:       C:\Users\supor\AppData\Local\Microsoft\WinGet\Packages\Google.FirebaseCLI_Microsoft.Winget.Source_8wekyb3d8bbwe\firebase.exe C:\Users\supor\.cache\firebase\tools\lib\node_modules\firebase-tools\lib\bin\firebase projects:list --json
+[debug] [2026-09-29T23:07:21.350Z] CLI Version:   14.11.0
+[debug] [2026-09-29T23:07:21.350Z] Platform:      win32
+[debug] [2026-09-29T23:07:21.350Z] Node Version:  v20.18.2
+[debug] [2026-09-29T23:07:21.350Z] Time:          Tue Sep 29 2026 20:07:21 GMT-0300 (GMT-03:00)
+[debug] [2026-09-29T23:07:21.351Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-09-29T23:07:21.353Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-09-29T23:07:21.400Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-09-29T23:07:21.401Z] > authorizing via signed-in user (contato@ebensystem.com.br)
+[debug] [2026-09-29T23:07:21.405Z] Checked if tokens are valid: false, expires at: 1790371012735
+[debug] [2026-09-29T23:07:21.406Z] Checked if tokens are valid: false, expires at: 1790371012735
+[debug] [2026-09-29T23:07:21.406Z] > refreshing access token with scopes: []
+[debug] [2026-09-29T23:07:21.407Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-09-29T23:07:21.407Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-09-29T23:07:22.048Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-09-29T23:07:22.049Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-09-29T23:07:23.613Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-09-29T23:07:23.613Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-09-29T23:07:23.625Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2026-09-29T23:07:24.530Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2026-09-29T23:07:45.823Z] ----------------------------------------------------------------------
+[debug] [2026-09-29T23:07:45.826Z] Command:       C:\Users\supor\AppData\Local\Microsoft\WinGet\Packages\Google.FirebaseCLI_Microsoft.Winget.Source_8wekyb3d8bbwe\firebase.exe C:\Users\supor\.cache\firebase\tools\lib\node_modules\firebase-tools\lib\bin\firebase apps:list WEB --project ebenliving-52a3e --json
+[debug] [2026-09-29T23:07:45.826Z] CLI Version:   14.11.0
+[debug] [2026-09-29T23:07:45.826Z] Platform:      win32
+[debug] [2026-09-29T23:07:45.827Z] Node Version:  v20.18.2
+[debug] [2026-09-29T23:07:45.827Z] Time:          Tue Sep 29 2026 20:07:45 GMT-0300 (GMT-03:00)
+[debug] [2026-09-29T23:07:45.827Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-09-29T23:07:45.832Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-09-29T23:07:45.833Z] > authorizing via signed-in user (contato@ebensystem.com.br)
+[debug] [2026-09-29T23:07:45.836Z] Checked if tokens are valid: true, expires at: 1790726842614
+[debug] [2026-09-29T23:07:45.836Z] Checked if tokens are valid: true, expires at: 1790726842614
+[debug] [2026-09-29T23:07:45.838Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/ebenliving-52a3e/webApps pageSize=100
+[debug] [2026-09-29T23:07:46.770Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/ebenliving-52a3e/webApps 200
+[debug] [2026-09-29T23:08:13.985Z] ----------------------------------------------------------------------
+[debug] [2026-09-29T23:08:13.988Z] Command:       C:\Users\supor\AppData\Local\Microsoft\WinGet\Packages\Google.FirebaseCLI_Microsoft.Winget.Source_8wekyb3d8bbwe\firebase.exe C:\Users\supor\.cache\firebase\tools\lib\node_modules\firebase-tools\lib\bin\firebase apps:sdkconfig WEB 1:498935725170:web:a8620cee7605a933ba56eb --project ebenliving-52a3e --json
+[debug] [2026-09-29T23:08:13.988Z] CLI Version:   14.11.0
+[debug] [2026-09-29T23:08:13.988Z] Platform:      win32
+[debug] [2026-09-29T23:08:13.988Z] Node Version:  v20.18.2
+[debug] [2026-09-29T23:08:13.988Z] Time:          Tue Sep 29 2026 20:08:13 GMT-0300 (GMT-03:00)
+[debug] [2026-09-29T23:08:13.988Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-09-29T23:08:13.993Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-09-29T23:08:13.994Z] > authorizing via signed-in user (contato@ebensystem.com.br)
+[debug] [2026-09-29T23:08:13.996Z] Checked if tokens are valid: true, expires at: 1790726842614
+[debug] [2026-09-29T23:08:13.997Z] Checked if tokens are valid: true, expires at: 1790726842614
+[debug] [2026-09-29T23:08:13.998Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:498935725170:web:a8620cee7605a933ba56eb/config [none]
+[debug] [2026-09-29T23:08:15.446Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:498935725170:web:a8620cee7605a933ba56eb/config 200

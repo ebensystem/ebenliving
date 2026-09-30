@@ -1,0 +1,18 @@
+{
+  "hosting": {
+    "site": "ebenliving-52a3e",
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "tests/**",
+      "**/*.md",
+      "**/*.txt",
+      "**/*.log",
+      "**/*.mjs",
+      "**/*.cjs",
+      "**/*.ps1"
+    ]
+  }
+}
