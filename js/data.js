@@ -1,6 +1,6 @@
 const properties = [
   {
-    id:"casa-serra", title:"Casa aconchegante na serra", city:"Gramado", state:"RS", price:420,
+    id:"casa-serra", plan:"flex", title:"Casa aconchegante na serra", city:"Gramado", state:"RS", price:420,
     guests:6, bedrooms:3, bathrooms:2,
     description:"Uma casa confortável para famílias e grupos que procuram tranquilidade, boa localização e espaço para aproveitar a estadia.",
     images:[
@@ -12,7 +12,7 @@ const properties = [
     unavailable:["2026-10-10","2026-10-11","2026-10-12","2026-10-24"]
   },
   {
-    id:"apartamento-centro", title:"Apartamento moderno no centro", city:"Porto Alegre", state:"RS", price:260,
+    id:"apartamento-centro", plan:"flex", title:"Apartamento moderno no centro", city:"Porto Alegre", state:"RS", price:260,
     guests:4, bedrooms:2, bathrooms:1,
     description:"Apartamento moderno e funcional, ideal para viagens de trabalho, eventos e estadias rápidas no centro da cidade.",
     images:[
@@ -24,7 +24,7 @@ const properties = [
     unavailable:["2026-10-04","2026-10-05","2026-10-17"]
   },
   {
-    id:"casa-praia", title:"Casa com piscina perto da praia", city:"Torres", state:"RS", price:590,
+    id:"casa-praia", plan:"flex", title:"Casa com piscina perto da praia", city:"Torres", state:"RS", price:590,
     guests:8, bedrooms:4, bathrooms:3,
     description:"Casa ampla para férias, com piscina e áreas externas para aproveitar dias de descanso perto da praia.",
     images:[
@@ -34,5 +34,11 @@ const properties = [
     ],
     amenities:["Piscina","Wi-Fi","Churrasqueira","Estacionamento","Cozinha"],
     unavailable:["2026-10-02","2026-10-03","2026-10-20","2026-10-21"]
-  }
-];
+  },
+  {
+    id:"casa-familiar-mensal", plan:"home", terms:"both", title:"Casa familiar com jardim", city:"Caxias do Sul", state:"RS", price:2800,
+    guests:5, bedrooms:3, bathrooms:2,
+    description:"Uma casa mobiliada para quem busca uma moradia confortável por alguns meses ou por um contrato anual.",
+    images:["https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80"],
+    amenities:["Wi-Fi","Estacionamento","Cozinha","Jardim"], unavailable:[]
+  }];
