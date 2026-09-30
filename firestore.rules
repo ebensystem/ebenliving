@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn() && (request.auth.token.admin == true
+        || (request.auth.token.email == 'suporte@ebensystem.com.br' && request.auth.token.email_verified == true));
+    }
+    function owns(userId) { return signedIn() && request.auth.uid == userId; }
+
+    match /properties/{propertyId} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && request.resource.data.id == propertyId
+        && request.resource.data.title is string
+        && request.resource.data.city is string
+        && request.resource.data.state is string
+        && request.resource.data.price is number
+        && request.resource.data.price > 0
+        && request.resource.data.guests is int
+        && request.resource.data.guests > 0
+        && request.resource.data.images is list
+        && request.resource.data.unavailable is list;
+      allow delete: if isAdmin();
+    }
+
+    match /reservations/{reservationId} {
+      allow read: if isAdmin() || owns(resource.data.userId);
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.id == reservationId
+        && request.resource.data.status == 'pendente'
+        && request.resource.data.propertyId is string
+        && exists(/databases/$(database)/documents/properties/$(request.resource.data.propertyId))
+        && get(/databases/$(database)/documents/properties/$(request.resource.data.propertyId)).data.active == true
+        && request.resource.data.guest is string
+        && request.resource.data.checkIn is string
+        && request.resource.data.checkOut is string
+        && request.resource.data.total is number
+        && request.resource.data.total > 0;
+      allow update: if isAdmin() || (owns(resource.data.userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status == 'cancelada');
+      allow delete: if isAdmin();
+    }
+
+    match /availability/{lockId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.reservationId is string
+        && existsAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId))
+        && getAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.userId == request.auth.uid
+        && getAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.propertyId == request.resource.data.propertyId
+        && getAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.status == 'pendente'
+        && request.resource.data.date >= getAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.checkIn
+        && request.resource.data.date < getAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.checkOut;
+      allow update: if false;
+      allow delete: if isAdmin() || (signedIn()
+        && existsAfter(/databases/$(database)/documents/reservations/$(resource.data.reservationId))
+        && getAfter(/databases/$(database)/documents/reservations/$(resource.data.reservationId)).data.userId == request.auth.uid
+        && getAfter(/databases/$(database)/documents/reservations/$(resource.data.reservationId)).data.status == 'cancelada');
+    }
+
+    match /users/{userId} {
+      allow read: if owns(userId);
+      allow create, update: if owns(userId)
+        && request.resource.data.keys().hasOnly(['displayName', 'email', 'createdAt', 'updatedAt'])
+        && request.resource.data.displayName is string
+        && request.resource.data.email is string;
+      allow delete: if false;
+
+      match /favorites/{propertyId} {
+        allow read, write: if owns(userId);
+      }
+    }
+  }
+}

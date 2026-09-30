@@ -1,49 +1,38 @@
 EBENLIVING — UM PRODUTO EBENSYSTEM
 
 COMO ABRIR
-Use um servidor local para que as páginas compartilhem o mesmo armazenamento.
+Use um servidor local para que as páginas e o Firebase funcionem corretamente.
 - VS Code: abra index.html com a extensão Live Server.
-- Com Node.js instalado: execute node serve.mjs e abra http://127.0.0.1:8765.
-Abrir diretamente com file:// não garante armazenamento compartilhado entre páginas em todos os navegadores.
+- Com Node.js: execute node serve.mjs e abra http://127.0.0.1:8765.
+Não abra as páginas diretamente com file://.
 
 FUNCIONALIDADES
-- Busca por destino, datas, hóspedes, diária e comodidades; ordenação.
-- Favoritos locais, galeria ampliada e compartilhamento do link.
-- Calendário mensal e preço total com limpeza por estadia.
-- Solicitações locais, acompanhamento e cancelamento em reservas.html.
-- Painel com cadastro, edição, pausa de anúncios, bloqueios e gestão de reservas.
-- Indicadores calculados por mês de entrada e exportação CSV de todas as reservas.
+- Busca por destino, modalidade, datas, hóspedes, preço e comodidades.
+- Cadastro e login de clientes via Firebase Authentication.
+- Cadastro compartilhado de acomodações, estadias e bloqueios via Cloud Firestore.
+- Área de administrador protegida pela permissão Firebase admin: true.
+- Pagamentos ainda não estão integrados.
 
-ARQUIVOS
+ARQUIVOS PRINCIPAIS
 index.html: vitrine e busca
-imovel.html: detalhes, calendário e simulação de preço
-checkout.html: revisão e solicitação demonstrativa
-reservas.html: solicitações neste navegador
-admin.html: painel local do anfitrião
-login.html / cadastro.html: perfil de demonstração da sessão, sem autenticação
-js/data.js: acomodações iniciais de exemplo
-js/core.js: regras puras e validação
-js/living.js: interface e persistência
-css/style.css / css/brand.css / css/living.css: base, identidade e componentes
-assets/ebenliving-logo.png: logo original fornecido
-COMPARATIVO-MERCADO.md: referências, melhorias e limites
+imovel.html: detalhes e calendário
+checkout.html: revisão e solicitação de estadia
+reservas.html: estadias da conta conectada
+admin.html: painel administrativo
+login.html / cadastro.html: autenticação de clientes
+admin-login.html: login da administração
+js/firebase.js: inicialização do aplicativo Firebase
+js/auth.js: cadastro, login e controle de sessão
+js/firestore.js: leitura/gravação compartilhada e sincronização
+firestore.rules: regras de acesso do banco
+FIREBASE.md: criação do banco, ativação e publicação das regras
 
-DADOS E LIMITES
-Os dados ficam no localStorage, chave ebenliving:v1, por navegador e origem.
-Não são enviados para um servidor. Fotos usam URLs externas; fontes usam Google Fonts.
-Não há autenticação, controle de acesso, pagamentos ou reservas reais. Use dados fictícios.
-O painel e Minhas estadias mostram todos os registros deste navegador.
-Solicitações pendentes e confirmadas ocupam datas; canceladas liberam as datas, exceto bloqueios manuais.
-A entrada ocupa diária; a saída não. A limpeza é cobrada uma vez no valor simulado.
-Pausar um imóvel retira-o da busca e impede novas solicitações; mantém as anteriores.
-Solicitações guardam o valor original mesmo após edição da diária.
-A releitura antes da gravação reduz conflitos locais, mas não substitui transações de backend.
+CONFIGURAÇÃO FIREBASE
+Antes de usar a autenticação e a sincronização:
+1. Ative E-mail/senha no Firebase Authentication.
+2. Crie o Cloud Firestore no projeto ebenliving-52a3e.
+3. Publique firestore.rules pelo Firebase CLI.
+4. Autorize a conta administradora com a custom claim admin: true.
+Os passos completos estão em FIREBASE.md e FIREBASE_AUTH.md.
 
-TESTES
-node tests/core.test.cjs — 25 verificações de regras.
-Abra /tests/browser.html no servidor local — 34 verificações de integração.
-Execute os testes em perfil isolado: eles usam dados fictícios temporários e restauram o estado ao finalizar. Não os rode junto de edições reais em outra aba.
-Resultados e capturas de revisão estão em tests/.
-
-PRODUÇÃO
-Conectar autenticação, autorização, banco de dados, reservas transacionais, gateway, webhooks, políticas comerciais e privacidade antes de aceitar hóspedes reais.
+As acomodações são públicas para leitura. Reservas ficam ligadas ao UID do cliente e o painel pode acessá-las com uma conta autorizada. Dados locais antigos de reservas não são enviados para o banco, pois não têm um dono autenticado verificável.

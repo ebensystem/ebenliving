@@ -7,7 +7,13 @@ const root=fileURLToPath(new URL('.',import.meta.url));
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.svg':'image/svg+xml'};
 http.createServer(async(req,res)=>{
   try{
-    const relative=decodeURIComponent(new URL(req.url,'http://localhost').pathname).replace(/^\/+/, '')||'index.html';
+    const url=new URL(req.url,'http://localhost');
+    const pathname=decodeURIComponent(url.pathname);
+    const pages={'/':'index.html','/index':'index.html','/imovel':'imovel.html','/checkout':'checkout.html','/login':'login.html','/cadastro':'cadastro.html','/admin':'admin.html','/admin-login':'admin-login.html','/reservas':'reservas.html'};
+    if(pathname==='/index'){res.writeHead(301,{Location:'/'+url.search,'Cache-Control':'no-store'});res.end();return;}
+    const legacy=Object.entries(pages).find(([route,file])=>file!=='index.html'&&pathname===`/${file}` || file==='index.html'&&pathname==='/index.html');
+    if(legacy){const destination=legacy[0]==='/index'?'/':legacy[0];res.writeHead(301,{Location:destination+url.search,'Cache-Control':'no-store'});res.end();return;}
+    const relative=(pages[pathname]||pathname.replace(/^\/+/, '')||'index.html');
     const file=path.resolve(root,relative);
     if(!file.startsWith(path.resolve(root)+path.sep)){res.writeHead(403);res.end('Forbidden');return;}
     const content=await readFile(file);res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'application/octet-stream','Cache-Control':'no-store'});res.end(content);

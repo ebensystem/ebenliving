@@ -21,7 +21,7 @@
     return '';
   }
   function blocked(p,reservations,date,ignoreId) {
-    return p.unavailable.includes(date) || reservations.some(r=>r.id!==ignoreId && r.propertyId===p.id && r.status!=='cancelada' && r.checkIn<=date && date<r.checkOut);
+    return p.unavailable.includes(date) || (p.bookedDates||[]).includes(date) || reservations.some(r=>r.id!==ignoreId && r.propertyId===p.id && r.status!=='cancelada' && r.checkIn<=date && date<r.checkOut);
   }
   function available(p,reservations,a,b) { const days=range(a,b); return p.active!==false && days.length>0 && days.every(d=>!blocked(p,reservations,d)); }
   function quote(p,a,b) { const count=nights(a,b); const subtotal=Math.round(count*p.price*100)/100; const cleaning=Number(p.cleaningFee||0); return {nights:count,subtotal,cleaning,total:Math.round((subtotal+cleaning)*100)/100}; }
