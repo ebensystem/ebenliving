@@ -62,13 +62,14 @@ async function fetchState(currentUser) {
   let reservations = [];
   let favorites = [];
   if (user) {
-    const reservationQuery = admin
-      ? collection(db, 'reservations')
-      : query(collection(db, 'reservations'), where('userId', '==', user.uid));
-    const [reservationSnap, favoriteSnap] = await Promise.all([
-      getDocs(reservationQuery), getDocs(collection(db, 'users', user.uid, 'favorites'))
+    const reservationQueries = admin ? [collection(db, 'reservations')] : [
+      query(collection(db, 'reservations'), where('userId', '==', user.uid)),
+      query(collection(db, 'reservations'), where('propertyOwnerId', '==', user.uid))
+    ];
+    const [reservationSnaps, favoriteSnap] = await Promise.all([
+      Promise.all(reservationQueries.map(item => getDocs(item))), getDocs(collection(db, 'users', user.uid, 'favorites'))
     ]);
-    reservations = reservationSnap.docs.map(item => ({ ...item.data(), id: item.id }));
+    reservations = [...new Map(reservationSnaps.flatMap(snap => snap.docs.map(item => [item.id, { ...item.data(), id: item.id }]))).values()];
     favorites = favoriteSnap.docs.map(item => item.id);
   }
 
@@ -108,10 +109,21 @@ function watchChanges(currentUser) {
   });
   unsubscribe.push(propertiesWatch, availabilityWatch);
   if (currentUser) {
-    const reservationsQuery = admin ? collection(db, 'reservations') : query(collection(db, 'reservations'), where('userId', '==', currentUser.uid));
-    unsubscribe.push(onSnapshot(reservationsQuery, snapshot => {
-      publishPart('reservations', snapshot.docs.map(item => ({ ...item.data(), id: item.id })));
-    }));
+    if (admin) {
+      unsubscribe.push(onSnapshot(collection(db, 'reservations'), snapshot => {
+        publishPart('reservations', snapshot.docs.map(item => ({ ...item.data(), id: item.id })));
+      }));
+    } else {
+      const customerRows = new Map();
+      const hostRows = new Map();
+      const publishReservations = () => publishPart('reservations', [...new Map([...customerRows, ...hostRows]).values()]);
+      unsubscribe.push(onSnapshot(query(collection(db, 'reservations'), where('userId', '==', currentUser.uid)), snapshot => {
+        customerRows.clear(); snapshot.docs.forEach(item => customerRows.set(item.id, { ...item.data(), id: item.id })); publishReservations();
+      }));
+      unsubscribe.push(onSnapshot(query(collection(db, 'reservations'), where('propertyOwnerId', '==', currentUser.uid)), snapshot => {
+        hostRows.clear(); snapshot.docs.forEach(item => hostRows.set(item.id, { ...item.data(), id: item.id })); publishReservations();
+      }));
+    }
     unsubscribe.push(onSnapshot(collection(db, 'users', currentUser.uid, 'favorites'), snapshot => {
       publishPart('favorites', snapshot.docs.map(item => item.id));
     }));
@@ -131,14 +143,18 @@ async function persist(next) {
   const batch = writeBatch(db);
   let availabilityChanged = false;
 
-  if ([...oldProperties.keys(), ...newProperties.keys()].some(id => !same(oldProperties.get(id), newProperties.get(id)))) {
-    if (!admin) throw new Error('Somente uma conta administradora pode alterar acomodações.');
-  }
   for (const [id, item] of newProperties) if (!same(oldProperties.get(id), item)) {
+    const previous = oldProperties.get(id);
+    const isOwnedListing = user && item.ownerId === user.uid && (!previous || previous.ownerId === user.uid);
+    if (!admin && !isOwnedListing) throw new Error('Você só pode gerenciar acomodações da sua conta.');
     const { bookedDates, ...storedProperty } = item;
     batch.set(doc(db, 'properties', id), storedProperty);
   }
-  for (const id of oldProperties.keys()) if (!newProperties.has(id)) batch.delete(doc(db, 'properties', id));
+  for (const id of oldProperties.keys()) if (!newProperties.has(id)) {
+    const previous = oldProperties.get(id);
+    if (!admin && previous.ownerId !== user?.uid) throw new Error('Você só pode remover acomodações da sua conta.');
+    batch.delete(doc(db, 'properties', id));
+  }
 
   for (const [id, item] of newReservations) {
     const old = oldReservations.get(id);
@@ -146,12 +162,13 @@ async function persist(next) {
     if (!old) {
       if (!user) throw new Error('Entre na sua conta para registrar uma estadia.');
       item.userId = user.uid;
+      item.propertyOwnerId = newProperties.get(item.propertyId)?.ownerId || '';
       batch.set(doc(db, 'reservations', id), item);
       window.Living.range(item.checkIn, item.checkOut).forEach(day => {
         batch.set(doc(db, 'availability', `${item.propertyId}_${day}`), { propertyId: item.propertyId, date: day, reservationId: id });
       });
       availabilityChanged = true;
-    } else if (admin || (item.userId === user?.uid && item.status === 'cancelada')) {
+    } else if (admin || (item.propertyOwnerId === user?.uid && ['confirmada', 'cancelada'].includes(item.status)) || (item.userId === user?.uid && item.status === 'cancelada')) {
       batch.set(doc(db, 'reservations', id), item);
       if (item.status === 'cancelada' && old.status !== 'cancelada') {
         window.Living.range(old.checkIn, old.checkOut).forEach(day => batch.delete(doc(db, 'availability', `${old.propertyId}_${day}`)));
@@ -162,7 +179,7 @@ async function persist(next) {
     }
   }
   for (const id of oldReservations.keys()) if (!newReservations.has(id)) {
-    if (!admin) throw new Error('Somente a administração pode remover registros de estadia.');
+    if (!admin) throw new Error('Os registros de estadia não podem ser removidos.');
     const old = oldReservations.get(id);
     window.Living.range(old.checkIn, old.checkOut).forEach(day => batch.delete(doc(db, 'availability', `${old.propertyId}_${day}`)));
     availabilityChanged = true;

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0B2545">
+  <meta name="description" content="Crie seu espaço de anunciante e divulgue acomodações no ebenLiving.">
+  <title>Anuncie seu imóvel | ebenLiving</title>
+  <script>(function(){if(location.pathname==='/anuncie.html')location.replace('/anuncie/'+location.search+location.hash)})();</script>
+  <link rel="canonical" href="https://ebenliving.com.br/anuncie/">
+  <link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/brand.css"><link rel="stylesheet" href="/css/living.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Pular para o conteúdo</a>
+  <header class="header"><div class="container header-inner">
+    <a href="/" class="logo logo-image" aria-label="ebenLiving — início"><img src="/assets/ebenliving-logo.png" alt="ebenLiving, um produto EbenSystem" width="1448" height="1086"></a>
+    <nav class="nav" aria-label="Navegação da conta"><a href="/login/" class="btn btn-outline">Login do cliente</a><a href="/admin-login/" class="btn btn-primary">Login do anunciante</a></nav>
+    <button id="themeToggle" class="btn btn-outline theme-toggle" type="button" aria-label="Ativar tema escuro" aria-pressed="false">🌙 Escuro</button>
+  </div></header>
+  <main class="checkout" id="main"><div class="container narrow">
+    <section class="panel profile-panel">
+      <span class="eyebrow">PARA QUEM RECEBE</span>
+      <h1>Divulgue seu imóvel</h1>
+      <p class="muted">Crie seu espaço de anunciante para publicar acomodações, definir disponibilidade e acompanhar solicitações.</p>
+      <form id="authForm" data-auth-mode="register" data-account-type="host" data-redirect="/admin">
+        <div class="field"><label for="authName">Seu nome</label><input id="authName" name="name" autocomplete="name" minlength="2" maxlength="80" required></div>
+        <div class="field mt"><label for="authEmail">E-mail</label><input id="authEmail" name="email" type="email" autocomplete="email" required></div>
+        <div class="field mt"><label for="authPassword">Senha (mínimo 6 caracteres)</label><input id="authPassword" name="password" type="password" autocomplete="new-password" minlength="6" required></div>
+        <button class="btn btn-primary btn-large mt" type="submit">Criar conta de anunciante</button>
+      </form>
+      <p id="authMessage" class="error" role="alert" hidden></p>
+      <div id="hostUpgrade" hidden>
+        <p class="info-box">Sua conta atual pode ter um espaço de anunciante. Seus imóveis e solicitações ficam separados dos de outros anunciantes.</p>
+        <button class="btn btn-primary btn-large mt" type="button" data-host-upgrade>Ativar espaço de anunciante</button>
+      </div>
+      <p class="small muted">Já anuncia? <a class="link" href="/admin-login/">Entre no espaço do anunciante</a></p>
+      <p class="small muted">Quer reservar uma estadia? <a class="link" href="/login/">Acesse a conta de cliente</a>.</p>
+    </section>
+  </div></main>
+  <script type="module" src="/js/auth.js"></script><script src="/js/theme.js"></script>
+</body>
+</html>
