@@ -1,22 +1,27 @@
 # Firebase Authentication — ebenLiving
 
-O projeto usa Firebase Authentication com e-mail e senha. O checkout e Minhas estadias exigem uma sessão autenticada. O painel aceita a conta exata `suporte@ebensystem.com.br` depois que o e-mail for verificado pelo Firebase.
+O site separa contas de clientes e anunciantes. Ambos os fluxos usam Firebase Authentication com e-mail e senha.
 
-## Ativar cadastro e login
+## Clientes
 
-1. Abra [Authentication no projeto ebenLiving](https://console.firebase.google.com/u/0/project/ebenliving-52a3e/authentication/users?hl=pt-br).
-2. Em **Sign-in method / Método de login**, habilite **E-mail/senha** (a opção de link por e-mail não é necessária para este fluxo).
-3. Em **Configurações / Domínios autorizados**, confirme que `ebenliving.com.br` está autorizado.
-4. Faça o primeiro cadastro em `cadastro.html`. As contas aparecem em **Authentication → Users**.
+- `/cadastro/` cria uma conta de cliente.
+- `/login/` é a entrada para consultar estadias e continuar solicitações.
 
-## Entrar como administrador
+## Anunciantes
 
-Crie ou entre na conta `suporte@ebensystem.com.br` em `/cadastro` ou `/admin-login`. O site envia um link de verificação para esse endereço; depois de confirmar o e-mail, entre novamente em `/admin-login`. As regras do Firestore autorizam apenas esse endereço verificado (além de outras contas com custom claim `admin: true`). Não conceda papéis administrativos com campos editáveis pelo cliente.
+- `/anuncie/` cria um espaço de anunciante e abre o painel em `/admin/`.
+- Quem já tem conta de cliente pode ativar o espaço de anunciante nessa mesma página.
+- `/admin-login/` é a entrada de anunciantes existentes.
+- As regras do Firestore permitem que cada anunciante gerencie apenas imóveis e reservas ligados à própria conta.
 
-## Criar o banco e publicar as regras
+## Administração geral
 
-Siga o passo a passo de [FIREBASE.md](FIREBASE.md) para criar o Firestore em `southamerica-east1 (São Paulo)` e publicar `firestore.rules`. Sem criar o banco e publicar as regras, o site não consegue sincronizar os dados.
+A conta `suporte@ebensystem.com.br` pode administrar todos os anúncios depois de confirmar o endereço no Firebase Authentication. O painel geral não é concedido por um campo editável pelo navegador; somente uma custom claim `admin: true` também concede esse nível de acesso.
 
-O Firestore guarda anúncios, bloqueios de datas, solicitações, perfis e favoritos. As noites de uma estadia são registradas em `availability` e compartilhadas entre visitantes. As regras `firestore.rules` restringem cada gravação de acordo com a conta.
+## Configuração do Firebase
 
-O checkout registra a solicitação e as datas, mas não cobra nem confirma pagamento. A integração com Mercado Pago será feita depois, quando a conta e as credenciais estiverem disponíveis; chaves privadas devem ficar somente no servidor.
+1. Em [Authentication](https://console.firebase.google.com/u/0/project/ebenliving-52a3e/authentication/users?hl=pt-br), habilite **E-mail/senha**.
+2. Em **Configurações → Domínios autorizados**, confirme `ebenliving.com.br`.
+3. Siga [FIREBASE.md](FIREBASE.md) para criar o Firestore em `southamerica-east1` e publicar `firestore.rules`.
+
+O Firestore guarda anúncios, bloqueios de datas, solicitações, perfis e favoritos. O checkout registra solicitações e disponibilidade; a integração de pagamentos será feita quando as credenciais estiverem disponíveis.

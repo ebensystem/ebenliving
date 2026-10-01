@@ -39,10 +39,18 @@ async function fetchState(currentUser) {
   const booked = new Map();
   locksSnap.docs.forEach(item => {
     const lock = item.data();
-    if (!booked.has(lock.propertyId)) booked.set(lock.propertyId, []);
-    booked.get(lock.propertyId).push(lock.date);
+    if (!booked.has(lock.propertyId)) booked.set(lock.propertyId, { dates: [], byReservation: {} });
+    const propertyLocks = booked.get(lock.propertyId);
+    propertyLocks.dates.push(lock.date);
+    if (lock.reservationId) {
+      propertyLocks.byReservation[lock.reservationId] ||= [];
+      propertyLocks.byReservation[lock.reservationId].push(lock.date);
+    }
   });
-  properties = properties.map(item => ({ ...item, bookedDates: booked.get(item.id) || [] }));
+  properties = properties.map(item => {
+    const locks = booked.get(item.id) || { dates: [], byReservation: {} };
+    return { ...item, bookedDates: locks.dates, bookedReservationDates: locks.byReservation };
+  });
 
   // Migra apenas anúncios já existentes neste navegador, uma vez, e somente
   // quando o banco está vazio e a conta já foi autorizada como administradora.
@@ -94,18 +102,28 @@ function publishPart(key, value) {
 
 function watchChanges(currentUser) {
   const propertiesWatch = onSnapshot(collection(db, 'properties'), snapshot => {
-    const bookedByProperty = new Map(latestState.properties.map(item => [item.id, item.bookedDates || []]));
-    const list = snapshot.docs.map(item => ({ ...item.data(), id: item.id, bookedDates: bookedByProperty.get(item.id) || [] }));
+    const bookedByProperty = new Map(latestState.properties.map(item => [item.id, {
+      bookedDates: item.bookedDates || [], bookedReservationDates: item.bookedReservationDates || {}
+    }]));
+    const list = snapshot.docs.map(item => ({ ...item.data(), id: item.id, ...(bookedByProperty.get(item.id) || { bookedDates: [], bookedReservationDates: {} }) }));
     publishPart('properties', list);
   });
   const availabilityWatch = onSnapshot(collection(db, 'availability'), snapshot => {
     const grouped = new Map();
     snapshot.docs.forEach(item => {
       const lock = item.data();
-      if (!grouped.has(lock.propertyId)) grouped.set(lock.propertyId, []);
-      grouped.get(lock.propertyId).push(lock.date);
+      if (!grouped.has(lock.propertyId)) grouped.set(lock.propertyId, { dates: [], byReservation: {} });
+      const propertyLocks = grouped.get(lock.propertyId);
+      propertyLocks.dates.push(lock.date);
+      if (lock.reservationId) {
+        propertyLocks.byReservation[lock.reservationId] ||= [];
+        propertyLocks.byReservation[lock.reservationId].push(lock.date);
+      }
     });
-    publishPart('properties', latestState.properties.map(item => ({ ...item, bookedDates: grouped.get(item.id) || [] })));
+    publishPart('properties', latestState.properties.map(item => {
+      const locks = grouped.get(item.id) || { dates: [], byReservation: {} };
+      return { ...item, bookedDates: locks.dates, bookedReservationDates: locks.byReservation };
+    }));
   });
   unsubscribe.push(propertiesWatch, availabilityWatch);
   if (currentUser) {
@@ -147,7 +165,7 @@ async function persist(next) {
     const previous = oldProperties.get(id);
     const isOwnedListing = user && item.ownerId === user.uid && (!previous || previous.ownerId === user.uid);
     if (!admin && !isOwnedListing) throw new Error('Você só pode gerenciar acomodações da sua conta.');
-    const { bookedDates, ...storedProperty } = item;
+    const { bookedDates, bookedReservationDates, ...storedProperty } = item;
     batch.set(doc(db, 'properties', id), storedProperty);
   }
   for (const id of oldProperties.keys()) if (!newProperties.has(id)) {
