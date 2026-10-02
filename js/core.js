@@ -12,12 +12,12 @@
   function nights(a,b) { return (timestamp(b)-timestamp(a))/DAY; }
   function addDays(value,n) { return new Date(timestamp(value)+n*DAY).toISOString().slice(0,10); }
   function addMonths(value,n) { const d=new Date(timestamp(value)); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth()+n); return d.toISOString().slice(0,10); }
-  function range(a,b) { const count=nights(a,b); return Number.isInteger(count)&&count>0&&count<=365 ? Array.from({length:count},(_,i)=>addDays(a,i)) : []; }
+  function range(a,b) { const count=nights(a,b); return Number.isInteger(count)&&count>0&&count<=366 ? Array.from({length:count},(_,i)=>addDays(a,i)) : []; }
   function validateDates(a,b,min=today()) {
     if (!Number.isFinite(timestamp(a)) || !Number.isFinite(timestamp(b))) return 'Escolha datas válidas de entrada e saída.';
     if (a < min) return 'A entrada não pode ser no passado.';
     if (nights(a,b)<=0) return 'A saída precisa ser posterior à entrada.';
-    if (nights(a,b)>365) return 'Escolha uma estadia de até 365 noites.';
+    if (nights(a,b)>366) return 'Escolha um período de até 12 meses.';
     return '';
   }
   function blocked(p,reservations,date,ignoreId) {
@@ -29,7 +29,7 @@
   function quoteHome(p,term) { const months=term==="annual"?12:1; return {months,total:Math.round(p.price*months*100)/100}; }
   const normalize = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
   function search(list,reservations,filters,favorites=[]) {
-    let found=list.filter(p=>p.active!==false && (!filters.plan || (p.plan||"flex")===filters.plan) && (!filters.term || filters.plan!=="home" || !p.terms || p.terms==="both" || p.terms===filters.term) && (!filters.destination || normalize(`${p.title} ${p.city} ${p.state}`).includes(normalize(filters.destination))) && p.guests>=Number(filters.guests||1) && (!filters.maxPrice||p.price<=Number(filters.maxPrice)) && (!filters.amenity||p.amenities.includes(filters.amenity)) && (!filters.favorites||favorites.includes(p.id)) && (!filters.checkIn&&!filters.checkOut || !validateDates(filters.checkIn,filters.checkOut)&&available(p,reservations,filters.checkIn,filters.checkOut)));
+    let found=list.filter(p=>p.active!==false && (!filters.plan || p.plan===filters.plan) && (!filters.term || filters.plan!=="home" || !p.terms || p.terms==="both" || p.terms===filters.term) && (!filters.destination || normalize(`${p.title} ${p.city} ${p.state}`).includes(normalize(filters.destination))) && p.guests>=Number(filters.guests||1) && (!filters.maxPrice||p.price<=Number(filters.maxPrice)) && (!filters.amenity||p.amenities.includes(filters.amenity)) && (!filters.favorites||favorites.includes(p.id)) && (!filters.checkIn&&!filters.checkOut || !validateDates(filters.checkIn,filters.checkOut)&&available(p,reservations,filters.checkIn,filters.checkOut)));
     const price=p=>filters.checkIn&&filters.checkOut?quote(p,filters.checkIn,filters.checkOut).total:p.price;
     if(filters.sort==='price-asc') found.sort((a,b)=>price(a)-price(b));
     if(filters.sort==='price-desc') found.sort((a,b)=>price(b)-price(a));

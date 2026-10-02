@@ -52,21 +52,6 @@ async function fetchState(currentUser) {
     return { ...item, bookedDates: locks.dates, bookedReservationDates: locks.byReservation };
   });
 
-  // Migra apenas anúncios já existentes neste navegador, uma vez, e somente
-  // quando o banco está vazio e a conta já foi autorizada como administradora.
-  if (properties.length === 0 && admin) {
-    let seed = legacyProperties.length ? legacyProperties : (window.EbenDefaultProperties || []);
-    try {
-      const local = JSON.parse(localStorage.getItem('ebenliving:v1') || 'null');
-      if (local && window.Living.validState(local) && local.properties.length) seed = local.properties;
-    } catch {}
-    seed = seed.map(item => ({ ...item, active: item.active !== false, cleaningFee: Number(item.cleaningFee || 0) }));
-    const batch = writeBatch(db);
-    seed.forEach(item => batch.set(doc(db, 'properties', item.id), item));
-    if (seed.length) await batch.commit();
-    properties = seed;
-  }
-
   let reservations = [];
   let favorites = [];
   if (user) {
@@ -180,13 +165,13 @@ async function persist(next) {
     if (!old) {
       if (!user) throw new Error('Entre na sua conta para registrar uma estadia.');
       item.userId = user.uid;
-      item.propertyOwnerId = newProperties.get(item.propertyId)?.ownerId || '';
+      item.propertyOwnerId = newProperties.get(item.propertyId)?.ownerId || '';if(item.source==='host'&&!(admin||item.propertyOwnerId===user.uid))throw new Error('Você só pode registrar locações dos seus imóveis.');
       batch.set(doc(db, 'reservations', id), item);
       window.Living.range(item.checkIn, item.checkOut).forEach(day => {
         batch.set(doc(db, 'availability', `${item.propertyId}_${day}`), { propertyId: item.propertyId, date: day, reservationId: id });
       });
       availabilityChanged = true;
-    } else if (admin || (item.propertyOwnerId === user?.uid && ['confirmada', 'cancelada'].includes(item.status)) || (item.userId === user?.uid && item.status === 'cancelada')) {
+    } else if (admin || (item.propertyOwnerId === user?.uid) || (item.userId === user?.uid && item.status === 'cancelada')) {
       batch.set(doc(db, 'reservations', id), item);
       if (item.status === 'cancelada' && old.status !== 'cancelada') {
         window.Living.range(old.checkIn, old.checkOut).forEach(day => batch.delete(doc(db, 'availability', `${old.propertyId}_${day}`)));
@@ -223,7 +208,7 @@ window.EbenFirestore = {
       if (ready) return true;
       await new Promise(resolve => setTimeout(resolve, 50));
     }
-    throw new Error('O Firestore não respondeu. Confira se o banco foi criado e se as regras foram publicadas.');
+    throw new Error('Não foi possível carregar seus dados. Verifique sua conexão e tente novamente.');
   },
   persist
 };

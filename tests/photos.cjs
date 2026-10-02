@@ -1,0 +1,27 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const base=require('node:path').resolve(__dirname,'..');
+const context={URL,console,window:{EbenFirestore:{uid:'owner',isReady:true}}};vm.createContext(context);
+vm.runInContext(fs.readFileSync(base+'/js/core.js','utf8'),context);
+vm.runInContext(fs.readFileSync(base+'/js/photos.js','utf8'),context);
+const photos=context.window.EbenPhotos;
+assert.equal(photos.validateFile({type:'image/jpeg',size:1024}), '');
+assert.equal(photos.validateFile({type:'image/webp',size:10*1024*1024}), '');
+assert(photos.validateFile({type:'image/svg+xml',size:1024}));
+assert(photos.validateFile({type:'image/png',size:10*1024*1024+1}));
+const a='https://res.cloudinary.com/ztdylmq7/image/upload/v1/a.webp',b='https://res.cloudinary.com/ztdylmq7/image/upload/v1/b.webp';
+assert.equal(photos.uploadURL(a),a);
+assert.equal(photos.uploadURL('https://res.cloudinary.com/other/image/upload/a.webp'),'');
+assert.equal(photos.uploadURL('https://res.cloudinary.com.evil.test/ztdylmq7/image/upload/a.webp'),'');
+assert.equal(photos.uploadURL('http://res.cloudinary.com/ztdylmq7/image/upload/a.webp'),'');
+function element(){return {listeners:{},value:'',addEventListener(event,callback){this.listeners[event]=callback;},click(){this.clicked=true;}};}
+const field=element(),list=element(),input=element(),button=element(),status=element(),submit=element(),error=element();
+const els={'#prop-images':field,'#propertyPhotos':list,'#photoFiles':input,'#addPhotos':button,'#photoStatus':status,'[type="submit"]':submit,'#propertyError':error};
+const form={querySelector(selector){return els[selector];},addEventListener(){}};
+photos.mount(form,[a,b]);assert.equal(field.value,a+'\n'+b);
+list.listeners.click({target:{closest(selector){return selector==='[data-photo-cover]'?{dataset:{photoCover:'1'}}:null;}}});assert.equal(field.value,b+'\n'+a);
+list.listeners.click({target:{closest(selector){return selector==='[data-photo-remove]'?{dataset:{photoRemove:'0'}}:null;}}});assert.equal(field.value,a);
+context.window.EbenFirestore.uid=null;button.listeners.click();assert(!input.clicked);assert(error.textContent.includes('Entre na sua conta'));
+context.window.EbenFirestore.uid='owner';button.listeners.click();assert(input.clicked);
+for(const file of ['admin.html','admin/index.html'])assert(fs.readFileSync(base+'/'+file,'utf8').includes('/js/photos.js'));
+new vm.Script(fs.readFileSync(base+'/js/living.js','utf8'));
+console.log('PASS: formatos e tamanho, URLs de upload, miniaturas, capa, remoção, acesso e integração das páginas.');

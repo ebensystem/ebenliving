@@ -41,7 +41,7 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.id == reservationId
-        && request.resource.data.status == 'pendente'
+        && (request.resource.data.status == 'pendente' || (request.resource.data.status == 'confirmada' && request.resource.data.get('source', '') == 'host' && (isAdmin() || owns(listingOwner(request.resource.data.propertyId)))))
         && request.resource.data.propertyId is string
         && exists(/databases/$(database)/documents/properties/$(request.resource.data.propertyId))
         && get(/databases/$(database)/documents/properties/$(request.resource.data.propertyId)).data.active == true
@@ -53,7 +53,7 @@ service cloud.firestore {
         && request.resource.data.total > 0;
       allow update: if isAdmin()
         || (owns(resource.data.get('propertyOwnerId', ''))
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'payments', 'occupancy', 'actualCheckIn', 'actualCheckOut'])
           && request.resource.data.status in ['confirmada', 'cancelada'])
         || (owns(resource.data.get('userId', ''))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
@@ -68,7 +68,7 @@ service cloud.firestore {
         && existsAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId))
         && getAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.userId == request.auth.uid
         && getAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.propertyId == request.resource.data.propertyId
-        && getAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.status == 'pendente'
+        && getAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.status in ['pendente', 'confirmada']
         && request.resource.data.date >= getAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.checkIn
         && request.resource.data.date < getAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.checkOut;
       allow update: if false;
