@@ -1,36 +1,40 @@
 {
-    "hosting":  {
-                    "site":  "ebenliving-52a3e",
-                    "public":  ".",
-                    "ignore":  [
-                                   "firebase.json",
-                                   "**/.*",
-                                   "**/node_modules/**",
-                                   "tests/**",
-                                   "**/*.md",
-                                   "**/*.txt",
-                                   "**/*.log",
-                                   "**/*.mjs",
-                                   "**/*.cjs",
-                                   "**/*.ps1",
-                                   "firestore.rules"
-                               ],
-                    "cleanUrls":  true,
-                    "trailingSlash":  false,
-                    "redirects":  [
-                                      {
-                                          "destination":  "/",
-                                          "source":  "/index.html",
-                                          "type":  301
-                                      },
-                                      {
-                                          "destination":  "/",
-                                          "source":  "/index",
-                                          "type":  301
-                                      }
-                                  ]
-                },
-    "firestore":  {
-                      "rules":  "firestore.rules"
-                  }
+  "hosting": {
+    "site": "ebenliving-52a3e",
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "tests/**",
+      "**/*.md",
+      "**/*.txt",
+      "**/*.log",
+      "**/*.mjs",
+      "**/*.cjs",
+      "**/*.ps1",
+      "firestore.rules",
+      "**/.*/**",
+      ".github-site-check/**",
+      ".firebase/**",
+      "**/test"
+    ],
+    "cleanUrls": true,
+    "trailingSlash": false,
+    "redirects": [
+      {
+        "destination": "/",
+        "source": "/index.html",
+        "type": 301
+      },
+      {
+        "destination": "/",
+        "source": "/index",
+        "type": 301
+      }
+    ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
 }
