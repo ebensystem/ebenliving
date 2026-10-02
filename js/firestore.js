@@ -8,14 +8,9 @@ let user = null;
 let admin = false;
 let ready = false;
 let loading = Promise.resolve();
-let legacyProperties = [];
 let cloud = { properties: [], reservations: [], favorites: [] };
 let latestState = null;
 let unsubscribe = [];
-try {
-  const legacy = JSON.parse(localStorage.getItem('ebenliving:v1') || 'null');
-  if (legacy && window.Living.validState(legacy)) legacyProperties = legacy.properties;
-} catch {}
 const clone = value => JSON.parse(JSON.stringify(value));
 const mapById = list => new Map(list.map(item => [item.id, item]));
 const canonical = value => Array.isArray(value) ? value.map(canonical) : value && typeof value === 'object'
@@ -136,7 +131,7 @@ function watchChanges(currentUser) {
 async function persist(next) {
   await loading;
   if (!ready) throw new Error('O banco ainda não terminou de carregar. Recarregue e tente novamente.');
-  const before = cloud;
+  const before = clone(cloud);
   const oldProperties = mapById(before.properties);
   const newProperties = mapById(next.properties);
   const oldReservations = mapById(before.reservations);
@@ -196,7 +191,12 @@ async function persist(next) {
       [...oldReservations.keys(), ...newReservations.keys()].some(id => !same(oldReservations.get(id), newReservations.get(id))) ||
       (user && (oldFavorites.size !== newFavorites.size || [...oldFavorites].some(id => !newFavorites.has(id))))) await batch.commit();
   cloud = clone({ properties: next.properties, reservations: next.reservations, favorites: next.favorites });
-  if (availabilityChanged) await fetchState(user);
+  // A successful write must not become a failed reservation just because a
+  // subsequent refresh lost its connection. Listeners will reconcile the data.
+  if (availabilityChanged) {
+    try { await fetchState(user); }
+    catch(error) { console.error('Falha ao atualizar a agenda após gravar:',error); }
+  }
 }
 
 window.EbenFirestore = {

@@ -29,7 +29,7 @@
   function quoteHome(p,term) { const months=term==="annual"?12:1; return {months,total:Math.round(p.price*months*100)/100}; }
   const normalize = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
   function search(list,reservations,filters,favorites=[]) {
-    let found=list.filter(p=>p.active!==false && (!filters.plan || p.plan===filters.plan) && (!filters.term || filters.plan!=="home" || !p.terms || p.terms==="both" || p.terms===filters.term) && (!filters.destination || normalize(`${p.title} ${p.city} ${p.state}`).includes(normalize(filters.destination))) && p.guests>=Number(filters.guests||1) && (!filters.maxPrice||p.price<=Number(filters.maxPrice)) && (!filters.amenity||p.amenities.includes(filters.amenity)) && (!filters.favorites||favorites.includes(p.id)) && (!filters.checkIn&&!filters.checkOut || !validateDates(filters.checkIn,filters.checkOut)&&available(p,reservations,filters.checkIn,filters.checkOut)));
+    let found=list.filter(p=>!p.deletedAt && p.active!==false && (!filters.plan || p.plan===filters.plan) && (!filters.term || filters.plan!=="home" || !p.terms || p.terms==="both" || p.terms===filters.term) && (!filters.destination || normalize(`${p.title} ${p.city} ${p.state}`).includes(normalize(filters.destination))) && (p.plan==='home'||p.guests>=Number(filters.guests||1)) && (!filters.maxPrice||p.price<=Number(filters.maxPrice)) && (!filters.amenity||p.amenities.includes(filters.amenity)) && (!filters.favorites||favorites.includes(p.id)) && (filters.plan==='home'||!filters.checkIn&&!filters.checkOut || !validateDates(filters.checkIn,filters.checkOut)&&available(p,reservations,filters.checkIn,filters.checkOut)));
     const price=p=>filters.checkIn&&filters.checkOut?quote(p,filters.checkIn,filters.checkOut).total:p.price;
     if(filters.sort==='price-asc') found.sort((a,b)=>price(a)-price(b));
     if(filters.sort==='price-desc') found.sort((a,b)=>price(b)-price(a));
@@ -42,5 +42,12 @@
   function validProperty(p) { return p&&typeof p.id==='string'&&typeof p.title==='string'&&typeof p.city==='string'&&typeof p.state==='string'&&Number.isFinite(p.price)&&p.price>0&&Number.isInteger(p.guests)&&p.guests>0&&Number.isInteger(p.bedrooms)&&p.bedrooms>0&&Number.isInteger(p.bathrooms)&&p.bathrooms>0&&Array.isArray(p.images)&&p.images.length>0&&p.images.every(s=>safeImage(s))&&Array.isArray(p.amenities)&&p.amenities.every(s=>typeof s==='string')&&Array.isArray(p.unavailable)&&p.unavailable.every(d=>Number.isFinite(timestamp(d)))&&Number.isFinite(p.cleaningFee||0)&&Number(p.cleaningFee||0)>=0&&(!p.plan||["flex","home"].includes(p.plan))&&(!p.terms||["monthly","annual","both"].includes(p.terms)); }
   function validReservation(r) { return r&&typeof r.id==='string'&&typeof r.propertyId==='string'&&typeof r.guest==='string'&&Number.isFinite(timestamp(r.checkIn))&&Number.isFinite(timestamp(r.checkOut))&&nights(r.checkIn,r.checkOut)>0&&Number.isInteger(r.guests)&&r.guests>0&&Number.isFinite(r.total)&&r.total>0&&['pendente','confirmada','cancelada'].includes(r.status); }
   function validState(s) { return s&&s.version===1&&Array.isArray(s.properties)&&s.properties.every(validProperty)&&new Set(s.properties.map(p=>p.id)).size===s.properties.length&&Array.isArray(s.reservations)&&s.reservations.every(r=>validReservation(r)&&s.properties.some(p=>p.id===r.propertyId))&&new Set(s.reservations.map(r=>r.id)).size===s.reservations.length&&Array.isArray(s.favorites)&&s.favorites.every(id=>typeof id==='string')&&Number.isInteger(s.revision)&&s.revision>=0; }
-  root.Living={today,timestamp,nights,addDays,addMonths,range,validateDates,blocked,available,quote,quoteHome,search,escape,safeImage,csvCell,validState};
+  function ownReservation(reservations,uid,propertyId,checkIn,checkOut) {
+    return uid ? reservations.find(r=>r.userId===uid&&r.source!=='host'&&r.propertyId===propertyId&&r.checkIn===checkIn&&r.checkOut===checkOut&&r.status!=='cancelada') : undefined;
+  }
+  function removalError(p,reservations) {
+    if(!p||p.deletedAt)return 'Este imóvel já foi excluído.';
+    return reservations.some(r=>r.propertyId===p.id&&r.status!=='cancelada'&&r.checkOut>today())?'Este imóvel tem solicitações ou reservas em andamento. Resolva esses registros antes de excluir.':'';
+  }
+  root.Living={today,timestamp,nights,addDays,addMonths,range,validateDates,blocked,available,quote,quoteHome,search,escape,safeImage,csvCell,validState,ownReservation,removalError};
 })(globalThis);

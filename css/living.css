@@ -106,6 +106,13 @@ html[data-theme="dark"] .btn-outline:hover,
 html[data-theme="dark"] .icon-button:hover { background-color: #183552; }
 html[data-theme="dark"] .theme-toggle { white-space: nowrap; }
 .theme-toggle { font-size: 11px; padding: 9px 12px; }
+/* Blend the existing light-background logo into the dark header. */
+html[data-theme="dark"] .logo-image img { filter:invert(1) hue-rotate(180deg);mix-blend-mode:screen; }
+.danger-text { color:#a22b2b; }
+html[data-theme="dark"] .danger-text { color:#ffb4b4; }
+.reservation-success { padding:18px 22px;border:1px solid #2ecc71;border-radius:12px;background:#eaf8ef;margin:20px 0;color:#125c32; }
+.reservation-success p { margin:6px 0 0; }
+html[data-theme="dark"] .reservation-success { background:#123a2b;color:#c7f9d8; }
 .property-photos { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px; }
 .photo-preview { min-width:0;border:1px solid var(--line);border-radius:12px;overflow:hidden; }
 .photo-preview img { display:block;width:100%;height:120px;object-fit:cover; }
