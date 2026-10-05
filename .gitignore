@@ -1,0 +1,10 @@
+node_modules/
+**/node_modules/
+.firebase/
+.github-site-check/
+.local-tools/
+*-debug.log
+firepit-log.txt
+.env*
+!.env.example
+test-results/

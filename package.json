@@ -1,0 +1,13 @@
+{
+  "name": "ebenliving-site",
+  "private": true,
+  "scripts": {
+    "test": "node tests/core.test.cjs && node tests/reservations.cjs && node tests/management.cjs && node tests/photos.cjs && node tests/auth-flow.cjs && node --test tests/expiry.test.cjs",
+    "test:rules": "node --test tests/firestore.test.cjs",
+    "sync": "node scripts/sync-pages.mjs"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
+    "firebase": "12.19.0"
+  }
+}

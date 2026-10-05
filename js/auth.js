@@ -1,7 +1,7 @@
 import { app } from './firebase.js';
 import {
   getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
-  signInWithEmailAndPassword, updateProfile, sendEmailVerification, signOut
+  signInWithEmailAndPassword, updateProfile, sendEmailVerification, sendPasswordResetEmail, signOut
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import {
   getFirestore, doc, getDoc, setDoc, serverTimestamp
@@ -13,9 +13,9 @@ const ADMIN_EMAIL = 'suporte@ebensystem.com.br';
 const params = new URLSearchParams(location.search);
 const form = document.querySelector('#authForm');
 const message = document.querySelector('#authMessage');
-const destinationFor = value => value && /^(?:\/)?(?:reservas|admin|admin-login|checkout|imovel|login|cadastro|anuncie)(?:\/)?(?:\?.*)?$/.test(value)
+const destinationFor = value => value && !value.startsWith('//') && /^(?:\/)?(?:reservas|admin|admin-login|checkout|imovel|login|cadastro|anuncie)?(?:\/)?(?:\?.*)?$/.test(value)
   ? (value.startsWith('/') ? value : `/${value}`) : '/reservas';
-const destination = destinationFor(form?.dataset.redirect || params.get('redirect'));
+const destination = destinationFor(params.get('redirect') || form?.dataset.redirect);
 const friendlyError = error => ({
   'auth/email-already-in-use': 'Este e-mail já possui uma conta. Entre com sua senha.',
   'auth/invalid-email': 'Informe um e-mail válido.',
@@ -42,8 +42,7 @@ function updateNavigation(user) {
   const nav = document.querySelector('.nav');
   const target = nav || document.querySelector('.header-inner');
   if (!target) return;
-  const loginLink = nav?.querySelector('a[href="/login"]');
-  if (loginLink) loginLink.hidden = Boolean(user);
+  document.querySelectorAll('[data-login-link], .nav a[href="/login"], .nav a[href="/login/"]').forEach(link => { link.hidden = Boolean(user); });
   let signOutButton = target.querySelector('[data-auth-signout]');
   if (!signOutButton && user) {
     signOutButton = document.createElement('button');
@@ -57,19 +56,25 @@ function updateNavigation(user) {
   if (signOutButton) signOutButton.hidden = !user;
 }
 
+let authSubmitting = false;
+let registrationUser = null;
 if (form) {
   form.addEventListener('submit', async event => {
     event.preventDefault();
+    authSubmitting = true;
     const button = form.querySelector('[type="submit"]');
     button.disabled = true;
+    const originalLabel = button.textContent;
+    button.textContent = form.dataset.authMode === 'register' ? 'Criando conta…' : 'Entrando…';
     setMessage('');
     try {
       const email = form.elements.email.value.trim();
       const password = form.elements.password.value;
       const registering = form.dataset.authMode === 'register';
       if (registering) {
-        const credential = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(credential.user, { displayName: form.elements.name?.value.trim() || '' });
+        const user = registrationUser?.email?.toLowerCase() === email.toLowerCase() ? registrationUser : (await createUserWithEmailAndPassword(auth, email, password)).user;
+        registrationUser = user;
+        await updateProfile(user, { displayName: form.elements.name?.value.trim() || '' });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
@@ -97,6 +102,9 @@ if (form) {
     } catch (error) {
       setMessage(friendlyError(error));
       button.disabled = false;
+    } finally {
+      authSubmitting = false;
+      button.textContent = originalLabel;
     }
   });
 }
@@ -106,7 +114,11 @@ let currentUser = null;
 onAuthStateChanged(auth, async user => {
   currentUser = user;
   authReady = true;
+  window.EbenUser = user;
+  for (const id of ['guestContact', 'homeContact']) { const input = document.getElementById(id); if(input && !input.value) input.value = user?.email || ''; }
+
   updateNavigation(user);
+  if (authSubmitting) return;
   let profile = {};
   if (user) {
     try { profile = (await getDoc(doc(db, 'users', user.uid))).data() || {}; } catch {}
@@ -124,11 +136,11 @@ onAuthStateChanged(auth, async user => {
       return;
     }
     form.hidden = true;
-    const upgrade = document.querySelector('[data-host-upgrade]');
+    const upgrade = document.querySelector('#hostUpgrade');
     if (upgrade) upgrade.hidden = false;
   } else if (form?.dataset.accountType === 'host') {
     form.hidden = false;
-    const upgrade = document.querySelector('[data-host-upgrade]');
+    const upgrade = document.querySelector('#hostUpgrade');
     if (upgrade) upgrade.hidden = true;
   }
 
@@ -201,7 +213,12 @@ document.addEventListener('submit', event => {
   if (!authReady || !currentUser) {
     event.preventDefault();
     event.stopImmediatePropagation();
-    const current = location.pathname.replace(/\/+$/, '').split('/').pop() + location.search;
+    const returnURL = new URL(location.href);
+    if (event.target.id === 'homeBookingForm') {
+      returnURL.searchParams.set('moveIn', document.getElementById('homeMoveIn').value);
+      returnURL.searchParams.set('term', document.getElementById('homeTerm').value);
+    }
+    const current = returnURL.pathname.replace(/\/+$/, '').split('/').pop() + returnURL.search;
     location.assign(`/login/?redirect=${encodeURIComponent(current)}`);
   } else {
     try { sessionStorage.setItem('ebenliving:guest', currentUser.displayName || currentUser.email || ''); } catch {}
@@ -209,3 +226,31 @@ document.addEventListener('submit', event => {
 }, true);
 
 document.querySelectorAll('[data-auth-signout]').forEach(bindSignOut);
+
+// Preserve the booking context when switching between account screens.
+if (form) {
+  document.querySelectorAll('a[href="/login/"], a[href="/cadastro/"]').forEach(link => {
+    if (params.has('redirect')) link.href += '?redirect=' + encodeURIComponent(destination);
+  });
+  const password = form.elements.password;
+  const reveal = document.createElement('button');
+  reveal.type = 'button'; reveal.className = 'text-button password-toggle';
+  reveal.textContent = 'Mostrar senha'; reveal.setAttribute('aria-pressed', 'false');
+  reveal.addEventListener('click', () => {
+    const visible = password.type === 'password'; password.type = visible ? 'text' : 'password';
+    reveal.textContent = visible ? 'Ocultar senha' : 'Mostrar senha'; reveal.setAttribute('aria-pressed', String(visible));
+  });
+  password.after(reveal);
+  if (form.dataset.authMode === 'login') {
+    const reset = document.createElement('button'); reset.type = 'button'; reset.className = 'text-button'; reset.textContent = 'Esqueci minha senha';
+    reveal.after(reset);
+    reset.addEventListener('click', async () => {
+      const email = form.elements.email;
+      if (!email.value.trim() || !email.reportValidity()) { email.focus(); setMessage('Informe seu e-mail para recuperar a senha.'); return; }
+      reset.disabled = true;
+      try { await sendPasswordResetEmail(auth, email.value.trim()); setMessage('Se houver uma conta para esse e-mail, você receberá as instruções de recuperação. Confira também o spam.'); }
+      catch (error) { setMessage(friendlyError(error)); }
+      finally { reset.disabled = false; }
+    });
+  }
+}

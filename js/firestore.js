@@ -62,8 +62,9 @@ async function fetchState(currentUser) {
   }
 
   cloud = { properties, reservations, favorites };
-  ready = true;
   const next = { version: 1, revision: Date.now(), properties, reservations, favorites };
+  if (!window.Living.validState(next)) throw new Error('Os dados recebidos estão incompletos. Tente novamente.');
+  ready = true;
   if (window.Living.validState(next)) {
     latestState = clone(next);
     window.EbenLivingSetCloudState?.(next);
@@ -81,14 +82,19 @@ function publishPart(key, value) {
 }
 
 function watchChanges(currentUser) {
-  const propertiesWatch = onSnapshot(collection(db, 'properties'), snapshot => {
+  const watch = (reference, callback) => onSnapshot(reference, callback, error => {
+    ready = false;
+    console.error('Falha na sincronização:', error);
+    window.dispatchEvent(new CustomEvent('ebenliving:firestore-error', { detail: error }));
+  });
+  const propertiesWatch = watch(collection(db, 'properties'), snapshot => {
     const bookedByProperty = new Map(latestState.properties.map(item => [item.id, {
       bookedDates: item.bookedDates || [], bookedReservationDates: item.bookedReservationDates || {}
     }]));
     const list = snapshot.docs.map(item => ({ ...item.data(), id: item.id, ...(bookedByProperty.get(item.id) || { bookedDates: [], bookedReservationDates: {} }) }));
     publishPart('properties', list);
   });
-  const availabilityWatch = onSnapshot(collection(db, 'availability'), snapshot => {
+  const availabilityWatch = watch(collection(db, 'availability'), snapshot => {
     const grouped = new Map();
     snapshot.docs.forEach(item => {
       const lock = item.data();
@@ -108,21 +114,21 @@ function watchChanges(currentUser) {
   unsubscribe.push(propertiesWatch, availabilityWatch);
   if (currentUser) {
     if (admin) {
-      unsubscribe.push(onSnapshot(collection(db, 'reservations'), snapshot => {
+      unsubscribe.push(watch(collection(db, 'reservations'), snapshot => {
         publishPart('reservations', snapshot.docs.map(item => ({ ...item.data(), id: item.id })));
       }));
     } else {
       const customerRows = new Map();
       const hostRows = new Map();
       const publishReservations = () => publishPart('reservations', [...new Map([...customerRows, ...hostRows]).values()]);
-      unsubscribe.push(onSnapshot(query(collection(db, 'reservations'), where('userId', '==', currentUser.uid)), snapshot => {
+      unsubscribe.push(watch(query(collection(db, 'reservations'), where('userId', '==', currentUser.uid)), snapshot => {
         customerRows.clear(); snapshot.docs.forEach(item => customerRows.set(item.id, { ...item.data(), id: item.id })); publishReservations();
       }));
-      unsubscribe.push(onSnapshot(query(collection(db, 'reservations'), where('propertyOwnerId', '==', currentUser.uid)), snapshot => {
+      unsubscribe.push(watch(query(collection(db, 'reservations'), where('propertyOwnerId', '==', currentUser.uid)), snapshot => {
         hostRows.clear(); snapshot.docs.forEach(item => hostRows.set(item.id, { ...item.data(), id: item.id })); publishReservations();
       }));
     }
-    unsubscribe.push(onSnapshot(collection(db, 'users', currentUser.uid, 'favorites'), snapshot => {
+    unsubscribe.push(watch(collection(db, 'users', currentUser.uid, 'favorites'), snapshot => {
       publishPart('favorites', snapshot.docs.map(item => item.id));
     }));
   }

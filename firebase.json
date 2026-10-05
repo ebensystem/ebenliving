@@ -17,7 +17,13 @@
       "**/.*/**",
       ".github-site-check/**",
       ".firebase/**",
-      "**/test"
+      "**/test",
+      "functions/**",
+      "scripts/**",
+      "package.json",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      "test-results/**"
     ],
     "cleanUrls": true,
     "trailingSlash": false,
@@ -36,5 +42,27 @@
   },
   "firestore": {
     "rules": "firestore.rules"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "ebenliving",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "*-debug.log",
+        "*.test.cjs"
+      ]
+    }
+  ],
+  "emulators": {
+    "firestore": {
+      "host": "127.0.0.1",
+      "port": 8085
+    },
+    "ui": {
+      "enabled": false
+    },
+    "singleProjectMode": true
   }
 }

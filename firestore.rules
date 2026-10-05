@@ -3,7 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function isAdmin() {
-      return signedIn() && (request.auth.token.admin == true
+      return signedIn() && (request.auth.token.get('admin', false) == true
         || (request.auth.token.email == 'suporte@ebensystem.com.br' && request.auth.token.email_verified == true));
     }
     function owns(userId) { return signedIn() && userId == request.auth.uid; }
@@ -25,6 +25,21 @@ service cloud.firestore {
         && data.images is list && data.images.size() > 0
         && data.unavailable is list;
     }
+    function validReservation(data) {
+      let property = get(/databases/$(database)/documents/properties/$(data.propertyId)).data;
+      return data.checkIn is string && data.checkOut is string
+        && data.checkIn.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.checkOut.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.checkOut > data.checkIn
+        && data.guests is int && data.guests > 0 && data.guests <= property.guests
+        && data.guest is string && data.guest.size() >= 2 && data.guest.size() <= 100
+        && data.total is number && data.total > 0
+        && (data.get('source', '') == 'host' ||
+          (data.contact is string && data.contact.size() > 3 && data.contact.size() <= 120))
+        && (property.get('plan', 'flex') != 'home' ||
+          (data.term in ['monthly', 'annual'] &&
+           (property.get('terms', 'both') == 'both' || data.term == property.terms)));
+    }
 
     match /properties/{propertyId} {
       allow read: if true;
@@ -39,6 +54,9 @@ service cloud.firestore {
     match /reservations/{reservationId} {
       allow read: if isAdmin() || owns(resource.data.get('userId', '')) || owns(resource.data.get('propertyOwnerId', ''));
       allow create: if signedIn()
+        && validReservation(request.resource.data)
+        && !request.resource.data.keys().hasAny(['expiresAtMs', 'expiredAt', 'cancelReason'])
+        && (request.resource.data.get('source', '') != 'host' || isAdmin() || owns(listingOwner(request.resource.data.propertyId)))
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.id == reservationId
         && (request.resource.data.status == 'pendente' || (request.resource.data.status == 'confirmada' && request.resource.data.get('source', '') == 'host' && (isAdmin() || owns(listingOwner(request.resource.data.propertyId)))))
@@ -53,6 +71,8 @@ service cloud.firestore {
         && request.resource.data.total > 0;
       allow update: if isAdmin()
         || (owns(resource.data.get('propertyOwnerId', ''))
+          && resource.data.status != 'cancelada'
+          && (request.resource.data.status != 'confirmada' || resource.data.status == 'confirmada' || resource.data.get('expiresAtMs', request.time.toMillis() + 1) > request.time.toMillis())
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'payments', 'occupancy', 'actualCheckIn', 'actualCheckOut'])
           && request.resource.data.status in ['confirmada', 'cancelada'])
         || (owns(resource.data.get('userId', ''))
@@ -64,6 +84,7 @@ service cloud.firestore {
     match /availability/{lockId} {
       allow read: if true;
       allow create: if signedIn()
+        && lockId == request.resource.data.propertyId + '_' + request.resource.data.date
         && request.resource.data.reservationId is string
         && existsAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId))
         && getAfter(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.userId == request.auth.uid
