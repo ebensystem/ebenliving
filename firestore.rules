@@ -23,7 +23,10 @@ service cloud.firestore {
         && data.price is number && data.price > 0
         && data.guests is int && data.guests > 0
         && data.images is list && data.images.size() > 0
-        && data.unavailable is list;
+        && data.unavailable is list
+        && data.get('plan', 'flex') in ['flex', 'home', 'mobile']
+        && (data.get('plan', 'flex') != 'mobile' ||
+          (data.vehicleType in ['car', 'motorhome'] && data.rentalUse in ['season', 'apps', 'both']));
     }
     function validReservation(data) {
       let property = get(/databases/$(database)/documents/properties/$(data.propertyId)).data;
@@ -34,6 +37,9 @@ service cloud.firestore {
         && data.guests is int && data.guests > 0 && data.guests <= property.guests
         && data.guest is string && data.guest.size() >= 2 && data.guest.size() <= 100
         && data.total is number && data.total > 0
+        && (property.get('plan', 'flex') != 'mobile' ||
+          (data.plan == 'mobile' && data.rentalUse in ['season', 'apps']
+           && (property.rentalUse == 'both' || data.rentalUse == property.rentalUse)))
         && (data.get('source', '') == 'host' ||
           (data.contact is string && data.contact.size() > 3 && data.contact.size() <= 120))
         && (property.get('plan', 'flex') != 'home' ||

@@ -28,8 +28,10 @@
   function quote(p,a,b) { const count=nights(a,b); const subtotal=Math.round(count*p.price*100)/100; const cleaning=Number(p.cleaningFee||0); return {nights:count,subtotal,cleaning,total:Math.round((subtotal+cleaning)*100)/100}; }
   function quoteHome(p,term) { const months=term==="annual"?12:1; return {months,total:Math.round(p.price*months*100)/100}; }
   const normalize = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+  function supportsUse(p,use){return p.plan!=='mobile'||(['season','apps'].includes(use)&&(p.rentalUse==='both'||p.rentalUse===use));}
+  function validVehicle(p){return p.plan!=='mobile'||(['car','motorhome'].includes(p.vehicleType)&&['season','apps','both'].includes(p.rentalUse));}
   function search(list,reservations,filters,favorites=[]) {
-    let found=list.filter(p=>!p.deletedAt && p.active!==false && (!filters.plan || p.plan===filters.plan) && (!filters.term || filters.plan!=="home" || !p.terms || p.terms==="both" || p.terms===filters.term) && (!filters.destination || normalize(`${p.title} ${p.city} ${p.state}`).includes(normalize(filters.destination))) && (p.plan==='home'||p.guests>=Number(filters.guests||1)) && (!filters.maxPrice||p.price<=Number(filters.maxPrice)) && (!filters.amenity||p.amenities.includes(filters.amenity)) && (!filters.favorites||favorites.includes(p.id)) && (filters.plan==='home'||!filters.checkIn&&!filters.checkOut || !validateDates(filters.checkIn,filters.checkOut)&&available(p,reservations,filters.checkIn,filters.checkOut)));
+    let found=list.filter(p=>!p.deletedAt && p.active!==false && (!filters.plan || p.plan===filters.plan) && (filters.plan!=='mobile'||(!filters.vehicleType||p.vehicleType===filters.vehicleType)&&(!filters.rentalUse||supportsUse(p,filters.rentalUse))) && (!filters.term || filters.plan!=="home" || !p.terms || p.terms==="both" || p.terms===filters.term) && (!filters.destination || normalize(`${p.title} ${p.city} ${p.state}`).includes(normalize(filters.destination))) && (p.plan==='home'||p.guests>=Number(filters.guests||1)) && (!filters.maxPrice||p.price<=Number(filters.maxPrice)) && (!filters.amenity||p.amenities.includes(filters.amenity)) && (!filters.favorites||favorites.includes(p.id)) && (filters.plan==='home'||!filters.checkIn&&!filters.checkOut || !validateDates(filters.checkIn,filters.checkOut)&&available(p,reservations,filters.checkIn,filters.checkOut)));
     const price=p=>filters.checkIn&&filters.checkOut?quote(p,filters.checkIn,filters.checkOut).total:p.price;
     if(filters.sort==='price-asc') found.sort((a,b)=>price(a)-price(b));
     if(filters.sort==='price-desc') found.sort((a,b)=>price(b)-price(a));
@@ -39,7 +41,7 @@
   function escape(s) { return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function safeImage(s) { try {const url=new URL(s);return url.protocol==='https:'?url.href:'';}catch{return '';} }
   function csvCell(value) { let s=String(value??'');if(/^[\s]*[=+@-]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'; }
-  function validProperty(p) { return p&&typeof p.id==='string'&&typeof p.title==='string'&&typeof p.city==='string'&&typeof p.state==='string'&&Number.isFinite(p.price)&&p.price>0&&Number.isInteger(p.guests)&&p.guests>0&&Number.isInteger(p.bedrooms)&&p.bedrooms>0&&Number.isInteger(p.bathrooms)&&p.bathrooms>0&&Array.isArray(p.images)&&p.images.length>0&&p.images.every(s=>safeImage(s))&&Array.isArray(p.amenities)&&p.amenities.every(s=>typeof s==='string')&&Array.isArray(p.unavailable)&&p.unavailable.every(d=>Number.isFinite(timestamp(d)))&&Number.isFinite(p.cleaningFee||0)&&Number(p.cleaningFee||0)>=0&&(!p.plan||["flex","home"].includes(p.plan))&&(!p.terms||["monthly","annual","both"].includes(p.terms)); }
+  function validProperty(p) { return p&&typeof p.id==='string'&&typeof p.title==='string'&&typeof p.city==='string'&&typeof p.state==='string'&&Number.isFinite(p.price)&&p.price>0&&Number.isInteger(p.guests)&&p.guests>0&&Number.isInteger(p.bedrooms)&&p.bedrooms>=(p.plan==='mobile'?0:1)&&Number.isInteger(p.bathrooms)&&p.bathrooms>=(p.plan==='mobile'?0:1)&&Array.isArray(p.images)&&p.images.length>0&&p.images.every(s=>safeImage(s))&&Array.isArray(p.amenities)&&p.amenities.every(s=>typeof s==='string')&&Array.isArray(p.unavailable)&&p.unavailable.every(d=>Number.isFinite(timestamp(d)))&&Number.isFinite(p.cleaningFee||0)&&Number(p.cleaningFee||0)>=0&&(!p.plan||["flex","home","mobile"].includes(p.plan))&&validVehicle(p)&&(!p.terms||["monthly","annual","both"].includes(p.terms)); }
   function validReservation(r) { return r&&typeof r.id==='string'&&typeof r.propertyId==='string'&&typeof r.guest==='string'&&Number.isFinite(timestamp(r.checkIn))&&Number.isFinite(timestamp(r.checkOut))&&nights(r.checkIn,r.checkOut)>0&&Number.isInteger(r.guests)&&r.guests>0&&Number.isFinite(r.total)&&r.total>0&&['pendente','confirmada','cancelada'].includes(r.status); }
   function validState(s) { return s&&s.version===1&&Array.isArray(s.properties)&&s.properties.every(validProperty)&&new Set(s.properties.map(p=>p.id)).size===s.properties.length&&Array.isArray(s.reservations)&&s.reservations.every(r=>validReservation(r)&&s.properties.some(p=>p.id===r.propertyId))&&new Set(s.reservations.map(r=>r.id)).size===s.reservations.length&&Array.isArray(s.favorites)&&s.favorites.every(id=>typeof id==='string')&&Number.isInteger(s.revision)&&s.revision>=0; }
   function ownReservation(reservations,uid,propertyId,checkIn,checkOut) {
@@ -49,5 +51,13 @@
     if(!p||p.deletedAt)return 'Este imóvel já foi excluído.';
     return reservations.some(r=>r.propertyId===p.id&&r.status!=='cancelada'&&r.checkOut>today())?'Este imóvel tem solicitações ou reservas em andamento. Resolva esses registros antes de excluir.':'';
   }
-  root.Living={today,timestamp,nights,addDays,addMonths,range,validateDates,blocked,available,quote,quoteHome,search,escape,safeImage,csvCell,validState,ownReservation,removalError};
+  function normalizePhone(value) {
+    const input=String(value||'').trim();
+    if(!input||!/^\+?[0-9() .-]+$/.test(input))return '';
+    let digits=input.replace(/\D/g,'');
+    if(input.startsWith('+'))return /^[1-9][0-9]{7,14}$/.test(digits)?'+'+digits:'';
+    if(digits.startsWith('55')&&(digits.length===12||digits.length===13))return '+'+digits;
+    return /^[1-9][0-9]{9,10}$/.test(digits)?'+55'+digits:'';
+  }
+  root.Living={supportsUse,validVehicle,normalizePhone,today,timestamp,nights,addDays,addMonths,range,validateDates,blocked,available,quote,quoteHome,search,escape,safeImage,csvCell,validState,ownReservation,removalError};
 })(globalThis);

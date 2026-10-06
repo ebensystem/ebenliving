@@ -1,0 +1,38 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const root=require('node:path').resolve(__dirname,'..');
+const ctx={URL,URLSearchParams,console,setTimeout,clearTimeout,
+ document:{getElementById:()=>null,addEventListener(){},querySelectorAll:()=>[]},
+ location:{search:''},localStorage:{getItem:()=>null},window:{addEventListener(){},EbenFirestore:{uid:'owner'}}};
+vm.createContext(ctx);
+for(const name of ['core','living','management'])vm.runInContext(fs.readFileSync(root+'/js/'+name+'.js','utf8'),ctx);
+const L=ctx.Living;
+const car={id:'car',ownerId:'owner',plan:'mobile',vehicleType:'car',rentalUse:'apps',title:'Carro automático',city:'São Paulo',state:'SP',price:150,cleaningFee:40,guests:5,bedrooms:0,bathrooms:0,images:['https://example.com/car.jpg'],amenities:['Automático'],unavailable:[],active:true};
+const motorhome={...car,id:'motorhome',vehicleType:'motorhome',rentalUse:'season',title:'Motorhome',guests:4};
+const flex={...car,id:'house',plan:'flex',bedrooms:2,bathrooms:1};
+const state=properties=>({version:1,revision:1,properties,reservations:[],favorites:[]});
+assert(L.validState(state([car,motorhome,flex])),'veículos não exigem quartos/banheiros');
+assert(!L.validState(state([{...car,vehicleType:'boat'}])));
+assert(!L.validState(state([{...car,rentalUse:'invalid'}])));
+assert(!L.validState(state([{...flex,bedrooms:0}])),'preserva validação de imóveis');
+const ids=(filter,rows=[])=>Array.from(L.search([car,motorhome,flex],rows,filter),p=>p.id);
+assert.deepEqual(ids({plan:'mobile'}),['car','motorhome']);
+assert.deepEqual(ids({plan:'mobile',rentalUse:'apps'}),['car']);
+assert.deepEqual(ids({plan:'mobile',vehicleType:'motorhome'}),['motorhome']);
+assert.deepEqual(ids({plan:'mobile',guests:5}),['car']);
+assert(!L.supportsUse(car,'season'));assert(L.supportsUse({...car,rentalUse:'both'},'season'));
+assert.equal(L.quote(car,'2030-01-01','2030-01-04').total,490);
+const reservation={id:'r',propertyId:'car',propertyOwnerId:'owner',plan:'mobile',rentalUse:'apps',checkIn:'2030-01-01',checkOut:'2030-01-04',status:'confirmada',total:490};
+assert(!L.available(car,[reservation],'2030-01-03','2030-01-05'));
+assert(L.available(car,[reservation],'2030-01-04','2030-01-05'));
+ctx.fixture={properties:[car,motorhome,flex,{...car,id:'other',ownerId:'other'}],reservations:[reservation]};
+vm.runInContext('state={...state,...fixture};adminPlan="mobile";',ctx);
+assert.deepEqual(Array.from(ctx.managedProperties(),p=>p.id),['car','motorhome']);
+assert.deepEqual(Array.from(ctx.managedReservations(),r=>r.id),['r']);
+assert.equal(ctx.rentalCharges(reservation)[0].amount,490);
+vm.runInContext('adminPlan="flex";',ctx);
+assert.equal(ctx.managedReservations().length,0);
+assert(ctx.listingMeta(car).includes('Carro'));assert(!ctx.listingMeta(car).includes('quartos'));
+assert(ctx.mobileUseField(car,'use').includes('value="apps"'));
+assert(!ctx.mobileUseField(car,'use').includes('value="season"'));
+for(const page of ['index.html','admin.html','admin/index.html'])assert(fs.readFileSync(root+'/'+page,'utf8').includes('Eben Mobile'));
+console.log('PASS: veículos, finalidades, busca, preço por diária, conflito de datas, gestão isolada e financeiro Mobile.');

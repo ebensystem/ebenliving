@@ -87,3 +87,12 @@ test('confirmed reservation survives expiration job', async () => {
   assert.equal(await expireReservation(adminDb, ref, snapshot.createTime.toMillis() + PENDING_MS * 2), 'unchanged');
   assert.equal((await ref.get()).data().status, 'confirmada');
 });
+
+test('Mobile accepts a vehicle and a permitted purpose, rejects incompatible purpose', async () => {
+  const vehicle={...listing,id:'vehicle',plan:'mobile',vehicleType:'car',rentalUse:'apps',bedrooms:0,bathrooms:0};
+  await assertSucceeds(setDoc(doc(dbFor('host'),'properties/vehicle'),vehicle));
+  await assertFails(setDoc(doc(dbFor('host'),'properties/bad'),{...vehicle,id:'bad',vehicleType:'boat'}));
+  const data=reservation({propertyId:'vehicle',plan:'mobile',rentalUse:'apps'});
+  await assertFails(setDoc(doc(dbFor('customer'),'reservations/r'),{...data,rentalUse:'season'}));
+  await assertSucceeds(setDoc(doc(dbFor('customer'),'reservations/r'),data));
+});

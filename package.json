@@ -2,7 +2,7 @@
   "name": "ebenliving-site",
   "private": true,
   "scripts": {
-    "test": "node tests/core.test.cjs && node tests/reservations.cjs && node tests/management.cjs && node tests/photos.cjs && node tests/auth-flow.cjs && node --test tests/expiry.test.cjs",
+    "test": "node tests/core.test.cjs && node tests/reservations.cjs && node tests/management.cjs && node tests/photos.cjs && node tests/auth-flow.cjs && node --test tests/expiry.test.cjs && node tests/contacts-dashboard.cjs && node tests/mobile.cjs",
     "test:rules": "node --test tests/firestore.test.cjs",
     "sync": "node scripts/sync-pages.mjs"
   },
