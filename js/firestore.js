@@ -24,38 +24,49 @@ async function fetchState(currentUser) {
   user = currentUser;
   admin = false;
   if (user) {
-    const token = await user.getIdTokenResult();
-    admin = token.claims.admin === true || (user.email?.toLowerCase() === 'suporte@ebensystem.com.br' && user.emailVerified);
+    try {
+      const token = await user.getIdTokenResult();
+      admin = token.claims.admin === true || (user.email?.toLowerCase() === 'suporte@ebensystem.com.br' && user.emailVerified);
+    } catch (error) {
+      console.error('Could not read Firebase session claims:', error);
+      window.dispatchEvent(new CustomEvent('ebenliving:firestore-error', { detail: error, resource: 'session' }));
+    }
   }
 
   const propsSnap = await getDocs(collection(db, 'properties'));
   const properties = propsSnap.docs.map(item => ({ ...item.data(), id: item.id, bookedDates: [], bookedReservationDates: {} }));
-
-  let reservations = [];
-  let favorites = [];
-  if (user) {
-    const reservationQueries = admin ? [collection(db, 'reservations')] : [
-      query(collection(db, 'reservations'), where('userId', '==', user.uid)),
-      query(collection(db, 'reservations'), where('propertyOwnerId', '==', user.uid))
-    ];
-    const [reservationSnaps, favoriteSnap] = await Promise.all([
-      Promise.all(reservationQueries.map(item => getDocs(item))), getDocs(collection(db, 'users', user.uid, 'favorites'))
-    ]);
-    reservations = [...new Map(reservationSnaps.flatMap(snap => snap.docs.map(item => [item.id, { ...item.data(), id: item.id }]))).values()];
-    favorites = favoriteSnap.docs.map(item => item.id);
-  }
-
+  let reservations = [], favorites = [];
   cloud = { properties, reservations, favorites };
-  const next = { version: 1, revision: Date.now(), properties, reservations, favorites };
-  if (!window.Living.validState(next)) throw new Error('Os dados recebidos estão incompletos. Tente novamente.');
-  if (window.Living.validState(next)) {
-    latestState = clone(next);
-    watchChanges(currentUser);
-    ready = true;
-    window.EbenLivingSetCloudState?.(latestState);
+  latestState = { version: 1, revision: Date.now(), properties, reservations, favorites };
+  if (!window.Living.validState(latestState)) throw new Error('Os dados recebidos estÃ£o incompletos.');
+  watchChanges(currentUser);
+  ready = true;
+  window.EbenLivingSetCloudState?.(latestState);
+
+  if (!user) return;
+  const reservationQueries = admin ? [collection(db, 'reservations')] : [
+    query(collection(db, 'reservations'), where('userId', '==', user.uid)),
+    query(collection(db, 'reservations'), where('propertyOwnerId', '==', user.uid))
+  ];
+  const results = await Promise.allSettled([
+    Promise.all(reservationQueries.map(item => getDocs(item))),
+    getDocs(collection(db, 'users', user.uid, 'favorites'))
+  ]);
+  if (results[0].status === 'fulfilled') {
+    reservations = [...new Map(results[0].value.flatMap(snap => snap.docs.map(item => [item.id, { ...item.data(), id: item.id }]))).values()];
+    publishPart('reservations', reservations);
+  } else {
+    console.error('Could not load Firebase reservations:', results[0].reason);
+    window.dispatchEvent(new CustomEvent('ebenliving:firestore-error', { detail: results[0].reason, resource: 'reservations' }));
+  }
+  if (results[1].status === 'fulfilled') {
+    favorites = results[1].value.docs.map(item => item.id);
+    publishPart('favorites', favorites);
+  } else {
+    console.error('Could not load Firebase favorites:', results[1].reason);
+    window.dispatchEvent(new CustomEvent('ebenliving:firestore-error', { detail: results[1].reason, resource: 'favorites' }));
   }
 }
-
 function publishPart(key, value) {
   if (!latestState) return;
   const next = { ...latestState, [key]: value, revision: Date.now() };
