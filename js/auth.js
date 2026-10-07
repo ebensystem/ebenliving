@@ -31,6 +31,27 @@ function setMessage(text) {
   message.hidden = !text;
 }
 
+function showHostActivation(gate, description) {
+  gate.innerHTML = `<div class="panel profile-panel"><h1>Acesso de anunciante</h1><p>${description}</p><button class="btn btn-primary" type="button" data-host-access-activate>Ativar espaço de anunciante</button><p class="small" data-host-activation-error hidden></p></div>`;
+  gate.hidden = false;
+  gate.querySelector('[data-host-access-activate]').addEventListener('click', async event => {
+    const button = event.currentTarget, errorMessage = gate.querySelector('[data-host-activation-error]');
+    button.disabled = true; button.textContent = 'Ativando…'; errorMessage.hidden = true;
+    try {
+      if (!auth.currentUser) throw new Error('Sua sessão expirou. Entre novamente.');
+      await setDoc(doc(db, 'users', auth.currentUser.uid), {
+        displayName: auth.currentUser.displayName || '', email: auth.currentUser.email || '',
+        accountType: 'host', updatedAt: serverTimestamp()
+      }, { merge: true });
+      location.replace('/admin/?host-activated=1');
+    } catch (error) {
+      console.error('Falha ao ativar acesso de anunciante:', error);
+      errorMessage.textContent = `${friendlyError(error)} (${error.code || 'firebase-error'})`;
+      errorMessage.hidden = false;
+      button.disabled = false; button.textContent = 'Tentar ativar novamente';
+    }
+  });
+}
 function bindSignOut(button) {
   button.addEventListener('click', async () => {
     await signOut(auth);
@@ -153,11 +174,7 @@ onAuthStateChanged(auth, async user => {
       location.replace(`/admin-login/?redirect=${encodeURIComponent('admin')}`);
       return;
     }
-    if (profileLoadError) {
-      const gate = document.querySelector('#adminAccessMessage');
-      gate.textContent = 'Não foi possível verificar sua conta no Firebase. Confira sua conexão e tente novamente.';
-      gate.hidden = false;
-    } else if (isAdmin || isHost) {
+    if (isAdmin || isHost) {
       try {
         await window.EbenFirestore.waitReady();
         adminPage.hidden = false;
@@ -167,13 +184,12 @@ onAuthStateChanged(auth, async user => {
         gate.textContent = error.message;
         gate.hidden = false;
       }
+    } else if (profileLoadError) {
+      showHostActivation(document.querySelector('#adminAccessMessage'), 'NÃ£o foi possÃ­vel ler o perfil salvo. Ative o acesso de anunciante para gravar seu perfil novamente.');
     } else {
-      const gate = document.querySelector('#adminAccessMessage');
-      gate.innerHTML = 'Para anunciar uma acomodação, ative seu espaço de anunciante. <a class="btn btn-primary mt" href="/anuncie/">Anuncie seu imóvel</a>';
-      gate.hidden = false;
+      showHostActivation(document.querySelector('#adminAccessMessage'), 'Sua conta estÃ¡ conectada, mas ainda nÃ£o tem o perfil de anunciante. Ative seu espaÃ§o para acessar e gerenciar seus imÃ³veis.');
     }
   }
-
   const reservationsPage = document.querySelector('#myReservations');
   if (reservationsPage) {
     if (!user) {

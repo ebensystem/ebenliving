@@ -7,6 +7,7 @@ const db = getFirestore(app);
 let user = null;
 let admin = false;
 let ready = false;
+let loadError = null;
 let loading = Promise.resolve();
 let cloud = { properties: [], reservations: [], favorites: [] };
 let latestState = null;
@@ -18,6 +19,7 @@ const canonical = value => Array.isArray(value) ? value.map(canonical) : value &
 const same = (a, b) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
 
 async function fetchState(currentUser) {
+  loadError = null;
   ready = false;
   unsubscribe.forEach(stop => stop());
   unsubscribe = [];
@@ -206,6 +208,7 @@ window.EbenFirestore = {
   get isReady() { return ready; },
   async waitReady() {
     for (let attempt = 0; attempt < 200; attempt++) {
+      if (loadError) throw new Error('Falha ao carregar dados do Firebase: ' + (loadError.code || loadError.message || 'erro desconhecido'));
       if (ready) return true;
       await new Promise(resolve => setTimeout(resolve, 50));
     }
@@ -233,6 +236,7 @@ window.EbenFirestore = {
 onAuthStateChanged(auth, currentUser => {
   ready = false;
   loading = fetchState(currentUser).catch(error => {
+    loadError = error;
     console.error('Falha ao carregar o Firestore:', error);
     window.dispatchEvent(new CustomEvent('ebenliving:firestore-error', { detail: error }));
   });
