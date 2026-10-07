@@ -202,19 +202,21 @@ async function persist(next) {
   // Active listeners receive reservation/lock changes; refetching here would reload every collection.
 }
 
+export async function waitReady() {
+  for (let attempt = 0; attempt < 200; attempt++) {
+    if (loadError) throw new Error('Falha ao carregar dados do Firebase: ' + (loadError.code || loadError.message || 'erro desconhecido'));
+    if (ready) return true;
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  throw new Error('NÃ£o foi possÃ­vel carregar seus dados. Verifique sua conexÃ£o e tente novamente.');
+}
+
 window.EbenFirestore = {
   get uid() { return user?.uid || null; },
   async getIdToken() { if (!user) throw new Error('Faça login para continuar.'); return user.getIdToken(); },
   get isAdmin() { return admin; },
   get isReady() { return ready; },
-  async waitReady() {
-    for (let attempt = 0; attempt < 200; attempt++) {
-      if (loadError) throw new Error('Falha ao carregar dados do Firebase: ' + (loadError.code || loadError.message || 'erro desconhecido'));
-      if (ready) return true;
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
-    throw new Error('Não foi possível carregar seus dados. Verifique sua conexão e tente novamente.');
-  },
+  waitReady,
   async loadAvailability(propertyId, from, to) { return loadAvailability(propertyId, from, to); },
   async loadAvailabilityRange(from, to) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) throw new Error('Informe um período válido.');

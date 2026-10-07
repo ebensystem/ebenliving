@@ -31,6 +31,10 @@ function setMessage(text) {
   message.hidden = !text;
 }
 
+async function waitForFirestoreData() {
+  const firestore = await import('./firestore.js');
+  return firestore.waitReady();
+}
 function showHostActivation(gate, description) {
   gate.innerHTML = `<div class="panel profile-panel"><h1>Acesso de anunciante</h1><p>${description}</p><button class="btn btn-primary" type="button" data-host-access-activate>Ativar espaço de anunciante</button><p class="small" data-host-activation-error hidden></p></div>`;
   gate.hidden = false;
@@ -176,7 +180,7 @@ onAuthStateChanged(auth, async user => {
     }
     if (isAdmin || isHost) {
       try {
-        await window.EbenFirestore.waitReady();
+        await waitForFirestoreData();
         adminPage.hidden = false;
         document.querySelector('#adminAccessMessage').hidden = true;
       } catch (error) {
@@ -197,7 +201,7 @@ onAuthStateChanged(auth, async user => {
       return;
     }
     try {
-      await window.EbenFirestore.waitReady();
+      await waitForFirestoreData();
       document.querySelector('#reservationsProtected').hidden = false;
       document.querySelector('#reservationsAccessMessage').hidden = true;
     } catch (error) {
