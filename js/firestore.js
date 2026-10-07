@@ -18,6 +18,7 @@ const canonical = value => Array.isArray(value) ? value.map(canonical) : value &
 const same = (a, b) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
 
 async function fetchState(currentUser) {
+  ready = false;
   unsubscribe.forEach(stop => stop());
   unsubscribe = [];
   user = currentUser;
@@ -27,25 +28,8 @@ async function fetchState(currentUser) {
     admin = token.claims.admin === true || (user.email?.toLowerCase() === 'suporte@ebensystem.com.br' && user.emailVerified);
   }
 
-  const [propsSnap, locksSnap] = await Promise.all([
-    getDocs(collection(db, 'properties')), getDocs(query(collection(db, 'availability'), where('date', '>=', window.Living.today())))
-  ]);
-  let properties = propsSnap.docs.map(item => ({ ...item.data(), id: item.id }));
-  const booked = new Map();
-  locksSnap.docs.forEach(item => {
-    const lock = item.data();
-    if (!booked.has(lock.propertyId)) booked.set(lock.propertyId, { dates: [], byReservation: {} });
-    const propertyLocks = booked.get(lock.propertyId);
-    propertyLocks.dates.push(lock.date);
-    if (lock.reservationId) {
-      propertyLocks.byReservation[lock.reservationId] ||= [];
-      propertyLocks.byReservation[lock.reservationId].push(lock.date);
-    }
-  });
-  properties = properties.map(item => {
-    const locks = booked.get(item.id) || { dates: [], byReservation: {} };
-    return { ...item, bookedDates: locks.dates, bookedReservationDates: locks.byReservation };
-  });
+  const propsSnap = await getDocs(collection(db, 'properties'));
+  const properties = propsSnap.docs.map(item => ({ ...item.data(), id: item.id, bookedDates: [], bookedReservationDates: {} }));
 
   let reservations = [];
   let favorites = [];
@@ -64,11 +48,11 @@ async function fetchState(currentUser) {
   cloud = { properties, reservations, favorites };
   const next = { version: 1, revision: Date.now(), properties, reservations, favorites };
   if (!window.Living.validState(next)) throw new Error('Os dados recebidos estão incompletos. Tente novamente.');
-  ready = true;
   if (window.Living.validState(next)) {
     latestState = clone(next);
-    window.EbenLivingSetCloudState?.(next);
-    watchChanges(currentUser);
+    await watchChanges(currentUser, true);
+    ready = true;
+    window.EbenLivingSetCloudState?.(latestState);
   }
 }
 
@@ -81,11 +65,17 @@ function publishPart(key, value) {
   window.EbenLivingSetCloudState?.(next);
 }
 
-function watchChanges(currentUser) {
-  const watch = (reference, callback) => onSnapshot(reference, callback, error => {
+function watchChanges(currentUser, waitForAvailability = false) {
+  let resolveAvailability, rejectAvailability, gotInitialAvailability = false;
+  const availabilityReady = new Promise((resolve, reject) => { resolveAvailability = resolve; rejectAvailability = reject; });
+  const watch = (reference, callback, isAvailability = false) => onSnapshot(reference, snapshot => {
+    callback(snapshot);
+    if (isAvailability && !gotInitialAvailability) { gotInitialAvailability = true; resolveAvailability(); }
+  }, error => {
     ready = false;
     console.error('Falha na sincronização:', error);
     window.dispatchEvent(new CustomEvent('ebenliving:firestore-error', { detail: error }));
+    if (isAvailability && !gotInitialAvailability) { gotInitialAvailability = true; rejectAvailability(error); }
   });
   const propertiesWatch = watch(collection(db, 'properties'), snapshot => {
     const bookedByProperty = new Map(latestState.properties.map(item => [item.id, {
@@ -110,7 +100,7 @@ function watchChanges(currentUser) {
       const locks = grouped.get(item.id) || { dates: [], byReservation: {} };
       return { ...item, bookedDates: locks.dates, bookedReservationDates: locks.byReservation };
     }));
-  });
+  }, true);
   unsubscribe.push(propertiesWatch, availabilityWatch);
   if (currentUser) {
     if (admin) {
@@ -132,6 +122,7 @@ function watchChanges(currentUser) {
       publishPart('favorites', snapshot.docs.map(item => item.id));
     }));
   }
+  if (waitForAvailability) return availabilityReady;
 }
 
 async function persist(next) {
