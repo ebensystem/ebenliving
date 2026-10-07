@@ -1,6 +1,6 @@
 import { app } from './firebase.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import { getFirestore, collection, doc, getDocs, query, where, writeBatch, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import { getFirestore, collection, doc, documentId, getDocs, query, where, writeBatch, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -50,7 +50,7 @@ async function fetchState(currentUser) {
   if (!window.Living.validState(next)) throw new Error('Os dados recebidos estão incompletos. Tente novamente.');
   if (window.Living.validState(next)) {
     latestState = clone(next);
-    await watchChanges(currentUser, true);
+    watchChanges(currentUser);
     ready = true;
     window.EbenLivingSetCloudState?.(latestState);
   }
@@ -65,17 +65,10 @@ function publishPart(key, value) {
   window.EbenLivingSetCloudState?.(next);
 }
 
-function watchChanges(currentUser, waitForAvailability = false) {
-  let resolveAvailability, rejectAvailability, gotInitialAvailability = false;
-  const availabilityReady = new Promise((resolve, reject) => { resolveAvailability = resolve; rejectAvailability = reject; });
-  const watch = (reference, callback, isAvailability = false) => onSnapshot(reference, snapshot => {
-    callback(snapshot);
-    if (isAvailability && !gotInitialAvailability) { gotInitialAvailability = true; resolveAvailability(); }
-  }, error => {
-    ready = false;
-    console.error('Falha na sincronização:', error);
+function watchChanges(currentUser) {
+  const watch = (reference, callback) => onSnapshot(reference, snapshot => callback(snapshot), error => {
+    console.error('Firestore listener failed:', error);
     window.dispatchEvent(new CustomEvent('ebenliving:firestore-error', { detail: error }));
-    if (isAvailability && !gotInitialAvailability) { gotInitialAvailability = true; rejectAvailability(error); }
   });
   const propertiesWatch = watch(collection(db, 'properties'), snapshot => {
     const bookedByProperty = new Map(latestState.properties.map(item => [item.id, {
@@ -84,24 +77,7 @@ function watchChanges(currentUser, waitForAvailability = false) {
     const list = snapshot.docs.map(item => ({ ...item.data(), id: item.id, ...(bookedByProperty.get(item.id) || { bookedDates: [], bookedReservationDates: {} }) }));
     publishPart('properties', list);
   });
-  const availabilityWatch = watch(query(collection(db, 'availability'), where('date', '>=', window.Living.today())), snapshot => {
-    const grouped = new Map();
-    snapshot.docs.forEach(item => {
-      const lock = item.data();
-      if (!grouped.has(lock.propertyId)) grouped.set(lock.propertyId, { dates: [], byReservation: {} });
-      const propertyLocks = grouped.get(lock.propertyId);
-      propertyLocks.dates.push(lock.date);
-      if (lock.reservationId) {
-        propertyLocks.byReservation[lock.reservationId] ||= [];
-        propertyLocks.byReservation[lock.reservationId].push(lock.date);
-      }
-    });
-    publishPart('properties', latestState.properties.map(item => {
-      const locks = grouped.get(item.id) || { dates: [], byReservation: {} };
-      return { ...item, bookedDates: locks.dates, bookedReservationDates: locks.byReservation };
-    }));
-  }, true);
-  unsubscribe.push(propertiesWatch, availabilityWatch);
+  unsubscribe.push(propertiesWatch);
   if (currentUser) {
     if (admin) {
       unsubscribe.push(watch(collection(db, 'reservations'), snapshot => {
@@ -122,9 +98,23 @@ function watchChanges(currentUser, waitForAvailability = false) {
       publishPart('favorites', snapshot.docs.map(item => item.id));
     }));
   }
-  if (waitForAvailability) return availabilityReady;
 }
 
+async function loadAvailability(propertyId, from, to) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) throw new Error('Informe um período válido.');
+  const endExclusive = window.Living.addDays(to, 1);
+  const snapshot = await getDocs(query(collection(db, 'availability'), where(documentId(), '>=', `${propertyId}_${from}`), where(documentId(), '<', `${propertyId}_${endExclusive}`)));
+  const locks = snapshot.docs.map(item => ({ ...item.data(), id: item.id })).filter(item => item.propertyId === propertyId && item.date >= from && item.date <= to);
+  const property = latestState?.properties.find(item => item.id === propertyId);
+  if (property) {
+    property.bookedDates = [...new Set([...(property.bookedDates || []).filter(day => day < from || day > to), ...locks.map(lock => lock.date)])].sort();
+    const byReservation = { ...(property.bookedReservationDates || {}) };
+    Object.keys(byReservation).forEach(id => { byReservation[id] = byReservation[id].filter(day => day < from || day > to); if (!byReservation[id].length) delete byReservation[id]; });
+    locks.forEach(lock => { if (lock.reservationId) { byReservation[lock.reservationId] ||= []; byReservation[lock.reservationId].push(lock.date); } });
+    property.bookedReservationDates = byReservation;
+  }
+  return locks;
+}
 async function persist(next) {
   await loading;
   if (!ready) throw new Error('O banco ainda não terminou de carregar. Recarregue e tente novamente.');
@@ -209,6 +199,22 @@ window.EbenFirestore = {
       await new Promise(resolve => setTimeout(resolve, 50));
     }
     throw new Error('Não foi possível carregar seus dados. Verifique sua conexão e tente novamente.');
+  },
+  async loadAvailability(propertyId, from, to) { return loadAvailability(propertyId, from, to); },
+  async loadAvailabilityRange(from, to) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) throw new Error('Informe um período válido.');
+    const snapshot = await getDocs(query(collection(db, 'availability'), where('date', '>=', from), where('date', '<=', to)));
+    const grouped = new Map();
+    snapshot.docs.forEach(item => { const lock = item.data(); if (!grouped.has(lock.propertyId)) grouped.set(lock.propertyId, []); grouped.get(lock.propertyId).push(lock); });
+    for (const [id, locks] of grouped) {
+      const property = latestState?.properties.find(item => item.id === id); if (!property) continue;
+      property.bookedDates = [...new Set([...(property.bookedDates || []).filter(day => day < from || day > to), ...locks.map(lock => lock.date)])].sort();
+      const byReservation = { ...(property.bookedReservationDates || {}) };
+      Object.keys(byReservation).forEach(reservationId => { byReservation[reservationId] = byReservation[reservationId].filter(day => day < from || day > to); if (!byReservation[reservationId].length) delete byReservation[reservationId]; });
+      locks.forEach(lock => { if (lock.reservationId) { byReservation[lock.reservationId] ||= []; byReservation[lock.reservationId].push(lock.date); } });
+      property.bookedReservationDates = byReservation;
+    }
+    return snapshot.size;
   },
   persist
 };

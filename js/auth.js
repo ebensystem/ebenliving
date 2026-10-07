@@ -119,13 +119,16 @@ onAuthStateChanged(auth, async user => {
 
   updateNavigation(user);
   if (authSubmitting) return;
-  let profile = {};
+  let profile = {}, profileLoadError = null;
   if (user) {
-    try { profile = (await getDoc(doc(db, 'users', user.uid))).data() || {}; } catch {}
+    try { profile = (await getDoc(doc(db, 'users', user.uid))).data() || {}; }
+    catch (error) { profileLoadError = error; console.error('Falha ao consultar o perfil do anunciante:', error); }
   }
-  const token = user ? await user.getIdTokenResult() : null;
+  let token = null;
+  try { token = user ? await user.getIdTokenResult() : null; }
+  catch (error) { console.error('Falha ao consultar a sessão:', error); }
   const isAdmin = Boolean(user && (
-    token.claims.admin === true ||
+    token?.claims?.admin === true ||
     (user.email?.toLowerCase() === ADMIN_EMAIL && user.emailVerified)
   ));
   const isHost = profile.accountType === 'host';
@@ -150,7 +153,11 @@ onAuthStateChanged(auth, async user => {
       location.replace(`/admin-login/?redirect=${encodeURIComponent('admin')}`);
       return;
     }
-    if (isAdmin || isHost) {
+    if (profileLoadError) {
+      const gate = document.querySelector('#adminAccessMessage');
+      gate.textContent = 'Não foi possível verificar sua conta no Firebase. Confira sua conexão e tente novamente.';
+      gate.hidden = false;
+    } else if (isAdmin || isHost) {
       try {
         await window.EbenFirestore.waitReady();
         adminPage.hidden = false;
