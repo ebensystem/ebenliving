@@ -28,7 +28,7 @@ async function fetchState(currentUser) {
   }
 
   const [propsSnap, locksSnap] = await Promise.all([
-    getDocs(collection(db, 'properties')), getDocs(collection(db, 'availability'))
+    getDocs(collection(db, 'properties')), getDocs(query(collection(db, 'availability'), where('date', '>=', window.Living.today())))
   ]);
   let properties = propsSnap.docs.map(item => ({ ...item.data(), id: item.id }));
   const booked = new Map();
@@ -94,7 +94,7 @@ function watchChanges(currentUser) {
     const list = snapshot.docs.map(item => ({ ...item.data(), id: item.id, ...(bookedByProperty.get(item.id) || { bookedDates: [], bookedReservationDates: {} }) }));
     publishPart('properties', list);
   });
-  const availabilityWatch = watch(collection(db, 'availability'), snapshot => {
+  const availabilityWatch = watch(query(collection(db, 'availability'), where('date', '>=', window.Living.today())), snapshot => {
     const grouped = new Map();
     snapshot.docs.forEach(item => {
       const lock = item.data();
@@ -145,7 +145,6 @@ async function persist(next) {
   const oldFavorites = new Set(before.favorites);
   const newFavorites = new Set(next.favorites);
   const batch = writeBatch(db);
-  let availabilityChanged = false;
 
   for (const [id, item] of newProperties) if (!same(oldProperties.get(id), item)) {
     const previous = oldProperties.get(id);
@@ -171,7 +170,6 @@ async function persist(next) {
       window.Living.range(item.checkIn, item.checkOut).forEach(day => {
         batch.set(doc(db, 'availability', `${item.propertyId}_${day}`), { propertyId: item.propertyId, date: day, reservationId: id });
       });
-      availabilityChanged = true;
     } else if (admin || (item.propertyOwnerId === user?.uid) || (item.userId === user?.uid && item.status === 'cancelada')) {
       const hostCreatedRental = item.source === 'host' && item.propertyOwnerId === user?.uid && old.source === 'host';
       if (!admin && item.propertyOwnerId === user?.uid && !hostCreatedRental) {
@@ -185,7 +183,6 @@ async function persist(next) {
       batch.set(doc(db, 'reservations', id), item);
       if (item.status === 'cancelada' && old.status !== 'cancelada') {
         window.Living.range(old.checkIn, old.checkOut).forEach(day => batch.delete(doc(db, 'availability', `${old.propertyId}_${day}`)));
-        availabilityChanged = true;
       }
     } else {
       throw new Error('Você não tem permissão para alterar esta estadia.');
@@ -195,7 +192,6 @@ async function persist(next) {
     if (!admin) throw new Error('Os registros de estadia não podem ser removidos.');
     const old = oldReservations.get(id);
     window.Living.range(old.checkIn, old.checkOut).forEach(day => batch.delete(doc(db, 'availability', `${old.propertyId}_${day}`)));
-    availabilityChanged = true;
     batch.delete(doc(db, 'reservations', id));
   }
 
@@ -208,10 +204,7 @@ async function persist(next) {
   cloud = clone({ properties: next.properties, reservations: next.reservations, favorites: next.favorites });
   // A successful write must not become a failed reservation just because a
   // subsequent refresh lost its connection. Listeners will reconcile the data.
-  if (availabilityChanged) {
-    try { await fetchState(user); }
-    catch(error) { console.error('Falha ao atualizar a agenda após gravar:',error); }
-  }
+  // Active listeners receive reservation/lock changes; refetching here would reload every collection.
 }
 
 window.EbenFirestore = {
