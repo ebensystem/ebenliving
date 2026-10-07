@@ -173,6 +173,15 @@ async function persist(next) {
       });
       availabilityChanged = true;
     } else if (admin || (item.propertyOwnerId === user?.uid) || (item.userId === user?.uid && item.status === 'cancelada')) {
+      const hostCreatedRental = item.source === 'host' && item.propertyOwnerId === user?.uid && old.source === 'host';
+      if (!admin && item.propertyOwnerId === user?.uid && !hostCreatedRental) {
+        const changed = Object.keys(item).filter(key => !same(old[key], item[key]));
+        const identityApproval = old.stage === 1 && item.stage === 2 && item.status === 'confirmada' && same(old.status, item.status) && changed.every(key => ['stage', 'status', 'identityApprovedAt'].includes(key));
+        const contractUpload = old.stage === 4 && item.stage === 5 && item.status === old.status && changed.every(key => ['stage', 'hostSignedDocument', 'hostSignedAt'].includes(key));
+        const keysStep = old.stage === 5 && item.stage === 6 && item.status === old.status && changed.every(key => ['stage', 'keysScheduledAt'].includes(key));
+        const cpfEdit = old.stage === 2 && item.stage === 2 && item.status === old.status && changed.every(key => key === 'cpf');
+        if (!(identityApproval || contractUpload || keysStep || cpfEdit)) throw new Error('Esta etapa não pode ser alterada por este usuário.');
+      }
       batch.set(doc(db, 'reservations', id), item);
       if (item.status === 'cancelada' && old.status !== 'cancelada') {
         window.Living.range(old.checkIn, old.checkOut).forEach(day => batch.delete(doc(db, 'availability', `${old.propertyId}_${day}`)));
@@ -207,6 +216,7 @@ async function persist(next) {
 
 window.EbenFirestore = {
   get uid() { return user?.uid || null; },
+  async getIdToken() { if (!user) throw new Error('Faça login para continuar.'); return user.getIdToken(); },
   get isAdmin() { return admin; },
   get isReady() { return ready; },
   async waitReady() {

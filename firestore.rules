@@ -25,6 +25,10 @@ service cloud.firestore {
         && data.images is list && data.images.size() > 0
         && data.unavailable is list
         && data.get('plan', 'flex') in ['flex', 'home', 'mobile']
+        && (!data.keys().hasAny(['terms'])
+          || data.terms in ['both', '6months', '1year', '2years', '3years', 'monthly', 'annual']
+          || (data.terms is list && data.terms.size() > 0 && data.terms.size() <= 4
+            && data.terms.hasOnly(['6months', '1year', '2years', '3years'])))
         && (data.get('plan', 'flex') != 'mobile' ||
           (data.vehicleType in ['car', 'motorhome'] && data.rentalUse in ['season', 'apps', 'both']));
     }
@@ -43,8 +47,10 @@ service cloud.firestore {
         && (data.get('source', '') == 'host' ||
           (data.contact is string && data.contact.size() > 3 && data.contact.size() <= 120))
         && (property.get('plan', 'flex') != 'home' ||
-          (data.term in ['monthly', 'annual'] &&
-           (property.get('terms', 'both') == 'both' || data.term == property.terms)));
+          (data.term in ['6months', '1year', '2years', '3years'] &&
+           (property.get('terms', 'both') == 'both'
+             ? true
+             : data.term == property.terms)));
     }
 
     match /properties/{propertyId} {
@@ -78,12 +84,16 @@ service cloud.firestore {
       allow update: if isAdmin()
         || (owns(resource.data.get('propertyOwnerId', ''))
           && resource.data.status != 'cancelada'
-          && (request.resource.data.status != 'confirmada' || resource.data.status == 'confirmada' || resource.data.get('expiresAtMs', request.time.toMillis() + 1) > request.time.toMillis())
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'payments', 'occupancy', 'actualCheckIn', 'actualCheckOut'])
-          && request.resource.data.status in ['confirmada', 'cancelada'])
+          && (request.resource.data.status != 'confirmada' || resource.data.status == 'confirmada' || (resource.data.get('plan', '') != 'home' && resource.data.get('expiresAtMs', request.time.toMillis() + 1) > request.time.toMillis()))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'payments', 'occupancy', 'actualCheckIn', 'actualCheckOut', 'cpf'])
+          && (request.resource.data.status in ['confirmada', 'cancelada'] || request.resource.data.status == resource.data.status)
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['cpf'])
+            || (resource.data.get('plan', '') == 'home' && resource.data.get('stage', 0) == 2
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cpf'])))
         || (owns(resource.data.get('userId', ''))
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
-          && request.resource.data.status == 'cancelada');
+          && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+            && request.resource.data.status == 'cancelada')
+            ));
       allow delete: if isAdmin();
     }
 
