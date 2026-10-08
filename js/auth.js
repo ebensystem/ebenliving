@@ -189,9 +189,9 @@ onAuthStateChanged(auth, async user => {
         gate.hidden = false;
       }
     } else if (profileLoadError) {
-      showHostActivation(document.querySelector('#adminAccessMessage'), 'NÃ£o foi possÃ­vel ler o perfil salvo. Ative o acesso de anunciante para gravar seu perfil novamente.');
+      showHostActivation(document.querySelector('#adminAccessMessage'), 'Não foi possível ler o perfil salvo. Ative o acesso de anunciante para gravar seu perfil novamente.');
     } else {
-      showHostActivation(document.querySelector('#adminAccessMessage'), 'Sua conta estÃ¡ conectada, mas ainda nÃ£o tem o perfil de anunciante. Ative seu espaÃ§o para acessar e gerenciar seus imÃ³veis.');
+      showHostActivation(document.querySelector('#adminAccessMessage'), 'Sua conta está conectada, mas ainda não tem o perfil de anunciante. Ative seu espaço para acessar e gerenciar seus imóveis.');
     }
   }
   const reservationsPage = document.querySelector('#myReservations');

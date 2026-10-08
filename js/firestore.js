@@ -41,7 +41,7 @@ async function fetchState(currentUser) {
   let reservations = [], favorites = [];
   cloud = { properties, reservations, favorites };
   latestState = { version: 1, revision: Date.now(), properties, reservations, favorites };
-  if (!window.Living.validState(latestState)) throw new Error('Os dados recebidos estÃ£o incompletos.');
+  if (!window.Living.validState(latestState)) throw new Error('Os dados recebidos estão incompletos.');
   watchChanges(currentUser);
   ready = true;
   window.EbenLivingSetCloudState?.(latestState);
@@ -208,7 +208,7 @@ export async function waitReady() {
     if (ready) return true;
     await new Promise(resolve => setTimeout(resolve, 50));
   }
-  throw new Error('NÃ£o foi possÃ­vel carregar seus dados. Verifique sua conexÃ£o e tente novamente.');
+  throw new Error('Não foi possível carregar seus dados. Verifique sua conexão e tente novamente.');
 }
 
 window.EbenFirestore = {
