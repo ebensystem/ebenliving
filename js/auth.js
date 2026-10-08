@@ -1,7 +1,8 @@
 import { app } from './firebase.js';
 import {
   getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
-  signInWithEmailAndPassword, updateProfile, sendEmailVerification, sendPasswordResetEmail, signOut
+  signInWithEmailAndPassword, updateProfile, sendEmailVerification, sendPasswordResetEmail, signOut,
+  GoogleAuthProvider, OAuthProvider, signInWithPopup, getAdditionalUserInfo
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import {
   getFirestore, doc, getDoc, setDoc, serverTimestamp
@@ -133,6 +134,66 @@ if (form) {
     }
   });
 }
+
+function socialError(error) {
+  const messages = {
+    'auth/operation-not-allowed': 'Ative este provedor no Firebase Authentication e tente novamente.',
+    'auth/unauthorized-domain': 'Adicione ebenliving.com.br aos domínios autorizados do Firebase Authentication.',
+    'auth/popup-closed-by-user': 'A janela de autenticação foi fechada antes da conclusão.',
+    'auth/popup-blocked': 'O navegador bloqueou a janela. Permita pop-ups e tente novamente.',
+    'auth/account-exists-with-different-credential': 'Este e-mail já tem uma conta. Entre pelo método usado anteriormente.',
+    'auth/invalid-oauth-client-id': 'Configure o aplicativo Microsoft e suas credenciais no Firebase Authentication.'
+  };
+  return messages[error.code] || friendlyError(error);
+}
+
+function mountSocialSignIn() {
+  if (!form) return;
+  const submitButton = form.querySelector('[type="submit"]');
+  if (!submitButton) return;
+  const actions = document.createElement('div');
+  actions.className = 'auth-provider-actions';
+  actions.innerHTML = `<div class="auth-provider-divider"><span>Ou continue com</span></div><button class="btn btn-outline btn-large auth-provider-button" type="button" data-auth-provider="google"><span class="auth-provider-mark google" aria-hidden="true">G</span>Continuar com Google</button><button class="btn btn-outline btn-large auth-provider-button" type="button" data-auth-provider="microsoft"><span class="auth-provider-mark microsoft" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Continuar com Microsoft</button>`;
+  submitButton.insertAdjacentElement('afterend', actions);
+  actions.addEventListener('click', async event => {
+    const button = event.target.closest('[data-auth-provider]');
+    if (!button || authSubmitting) return;
+    authSubmitting = true;
+    const providerButtons = [...actions.querySelectorAll('button')];
+    const originalContent = button.innerHTML;
+    providerButtons.forEach(item => { item.disabled = true; });
+    submitButton.disabled = true;
+    button.textContent = 'Conectando…';
+    setMessage('');
+    try {
+      const provider = button.dataset.authProvider === 'google'
+        ? new GoogleAuthProvider()
+        : new OAuthProvider('microsoft.com');
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      if (getAdditionalUserInfo(result)?.isNewUser) {
+        await setDoc(doc(db, 'users', user.uid), {
+          displayName: user.displayName || form.elements.name?.value.trim() || '',
+          email: user.email || '',
+          accountType: form.dataset.accountType || 'customer',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      }
+      try { sessionStorage.setItem('ebenliving:guest', user.displayName || user.email || ''); } catch {}
+      location.replace(destination);
+    } catch (error) {
+      authSubmitting = false;
+      console.error('Falha no login social:', error);
+      setMessage(socialError(error));
+      providerButtons.forEach(item => { item.disabled = false; });
+      submitButton.disabled = false;
+      button.innerHTML = originalContent;
+    }
+  });
+}
+mountSocialSignIn();
 
 let authReady = false;
 let currentUser = null;
