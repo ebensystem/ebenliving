@@ -50,7 +50,9 @@ service cloud.firestore {
           (data.term in ['6months', '1year', '2years', '3years'] &&
            (property.get('terms', 'both') == 'both'
              ? true
-             : data.term == property.terms)));
+             : property.terms is list
+               ? property.terms.hasAny([data.term])
+               : data.term == property.terms)));
     }
 
     match /properties/{propertyId} {
