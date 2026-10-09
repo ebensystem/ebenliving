@@ -15,6 +15,17 @@ service cloud.firestore {
     function listingOwner(propertyId) {
       return get(/databases/$(database)/documents/properties/$(propertyId)).data.get('ownerId', '');
     }
+    function validCloudinaryIdentity(document, userId) {
+      return document is map
+        && document.url is string
+        && document.url.matches('^https://res[.]cloudinary[.]com/ztdylmq7/(image|raw)/upload/.+$')
+        && document.publicId is string && document.publicId.size() > 0 && document.publicId.size() <= 300
+        && document.resourceType in ['image', 'raw']
+        && document.contentType in ['image/jpeg', 'image/png', 'application/pdf']
+        && document.bytes is int && document.bytes > 0 && document.bytes <= 5242880
+        && document.uploadedBy == userId
+        && document.uploadedAt is string;
+    }
     function validHomeTerm(property, term) {
       let terms = property.get('terms', 'both');
       return terms == 'both'
@@ -101,6 +112,23 @@ service cloud.firestore {
           && request.resource.data.status == resource.data.status
           && request.resource.data.stage == 1
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stage']))
+        || (owns(resource.data.get('userId', ''))
+          && resource.data.get('plan', '') == 'home'
+          && resource.data.status != 'cancelada'
+          && resource.data.get('stage', 0) == 1
+          && request.resource.data.stage == 1
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['documents'])
+          && request.resource.data.documents.keys().hasOnly(['identity'])
+          && validCloudinaryIdentity(request.resource.data.documents.identity, request.auth.uid))
+        || (owns(resource.data.get('propertyOwnerId', ''))
+          && resource.data.get('plan', '') == 'home'
+          && resource.data.status != 'cancelada'
+          && resource.data.get('stage', 0) == 1
+          && request.resource.data.stage == 2
+          && request.resource.data.status == 'confirmada'
+          && validCloudinaryIdentity(resource.data.get('documents', {}).get('identity', {}), resource.data.userId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stage', 'status', 'identityApprovedAt']))
         || (owns(resource.data.get('userId', ''))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
           && request.resource.data.status == 'cancelada');

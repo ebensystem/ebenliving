@@ -183,7 +183,8 @@ async function persist(next) {
         const contractUpload = old.stage === 4 && item.stage === 5 && item.status === old.status && changed.every(key => ['stage', 'hostSignedDocument', 'hostSignedAt'].includes(key));
         const keysStep = old.stage === 5 && item.stage === 6 && item.status === old.status && changed.every(key => ['stage', 'keysScheduledAt'].includes(key));
         const cpfEdit = old.stage === 2 && item.stage === 2 && item.status === old.status && changed.every(key => key === 'cpf');
-        if (!(firstStageApproval || identityApproval || contractUpload || keysStep || cpfEdit)) throw new Error('Esta etapa não pode ser alterada por este usuário.');
+        const identityUpload = old.plan === 'home' && old.stage === 1 && item.stage === 1 && item.status === old.status && changed.every(key => key === 'documents') && item.documents?.identity?.uploadedBy === user?.uid;
+        if (!(firstStageApproval || identityApproval || contractUpload || keysStep || cpfEdit || identityUpload)) throw new Error('Esta etapa não pode ser alterada por este usuário.');
       }
       queueWrite(current => current.set(doc(db, 'reservations', id), item));
       if (item.status === 'cancelada' && old.status !== 'cancelada') {
