@@ -15,6 +15,12 @@ service cloud.firestore {
     function listingOwner(propertyId) {
       return get(/databases/$(database)/documents/properties/$(propertyId)).data.get('ownerId', '');
     }
+    function validHomeTerm(property, term) {
+      let terms = property.get('terms', 'both');
+      return terms == 'both'
+        || (terms is list && terms.hasAny([term]))
+        || (terms is string && term == terms);
+    }
     function validProperty(data, propertyId) {
       return data.id == propertyId
         && data.title is string && data.title.size() > 0
@@ -48,11 +54,7 @@ service cloud.firestore {
           (data.contact is string && data.contact.size() > 3 && data.contact.size() <= 120))
         && (property.get('plan', 'flex') != 'home' ||
           (data.term in ['6months', '1year', '2years', '3years'] &&
-           (property.get('terms', 'both') == 'both'
-             ? true
-             : property.terms is list
-               ? property.terms.hasAny([data.term])
-               : data.term == property.terms)));
+           validHomeTerm(property, data.term)));
     }
 
     match /properties/{propertyId} {
@@ -91,11 +93,10 @@ service cloud.firestore {
           && (request.resource.data.status in ['confirmada', 'cancelada'] || request.resource.data.status == resource.data.status)
           && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['cpf'])
             || (resource.data.get('plan', '') == 'home' && resource.data.get('stage', 0) == 2
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cpf'])))
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cpf']))))
         || (owns(resource.data.get('userId', ''))
-          && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
-            && request.resource.data.status == 'cancelada')
-            ));
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+          && request.resource.data.status == 'cancelada');
       allow delete: if isAdmin();
     }
 
