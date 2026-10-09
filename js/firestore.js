@@ -179,10 +179,11 @@ async function persist(next) {
       if (!admin && item.propertyOwnerId === user?.uid && !hostCreatedRental) {
         const changed = Object.keys(item).filter(key => !same(old[key], item[key]));
         const identityApproval = old.stage === 1 && item.stage === 2 && item.status === 'confirmada' && same(old.status, item.status) && changed.every(key => ['stage', 'status', 'identityApprovedAt'].includes(key));
+        const firstStageApproval = old.plan === 'home' && old.status === 'pendente' && old.stage === 0 && item.stage === 1 && same(old.status, item.status) && changed.every(key => key === 'stage');
         const contractUpload = old.stage === 4 && item.stage === 5 && item.status === old.status && changed.every(key => ['stage', 'hostSignedDocument', 'hostSignedAt'].includes(key));
         const keysStep = old.stage === 5 && item.stage === 6 && item.status === old.status && changed.every(key => ['stage', 'keysScheduledAt'].includes(key));
         const cpfEdit = old.stage === 2 && item.stage === 2 && item.status === old.status && changed.every(key => key === 'cpf');
-        if (!(identityApproval || contractUpload || keysStep || cpfEdit)) throw new Error('Esta etapa não pode ser alterada por este usuário.');
+        if (!(firstStageApproval || identityApproval || contractUpload || keysStep || cpfEdit)) throw new Error('Esta etapa não pode ser alterada por este usuário.');
       }
       queueWrite(current => current.set(doc(db, 'reservations', id), item));
       if (item.status === 'cancelada' && old.status !== 'cancelada') {

@@ -94,6 +94,13 @@ service cloud.firestore {
           && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['cpf'])
             || (resource.data.get('plan', '') == 'home' && resource.data.get('stage', 0) == 2
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cpf']))))
+        || (owns(resource.data.get('propertyOwnerId', ''))
+          && resource.data.get('plan', '') == 'home'
+          && resource.data.status == 'pendente'
+          && resource.data.get('stage', 0) == 0
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.stage == 1
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stage']))
         || (owns(resource.data.get('userId', ''))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
           && request.resource.data.status == 'cancelada');
