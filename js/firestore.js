@@ -139,19 +139,28 @@ async function persist(next) {
   const newReservations = mapById(next.reservations);
   const oldFavorites = new Set(before.favorites);
   const newFavorites = new Set(next.favorites);
-  const batch = writeBatch(db);
+  // Firestore permits at most 500 writes per batch. Long-term home rentals
+  // can create up to 1,095 daily availability locks plus the reservation.
+  // Keep headroom for the reservation and other changed records.
+  const batches = [];
+  let batch = writeBatch(db), batchWrites = 0;
+  const queueWrite = operation => {
+    if (batchWrites >= 450) { batches.push(batch); batch = writeBatch(db); batchWrites = 0; }
+    operation(batch);
+    batchWrites++;
+  };
 
   for (const [id, item] of newProperties) if (!same(oldProperties.get(id), item)) {
     const previous = oldProperties.get(id);
     const isOwnedListing = user && item.ownerId === user.uid && (!previous || previous.ownerId === user.uid);
     if (!admin && !isOwnedListing) throw new Error('Você só pode gerenciar acomodações da sua conta.');
     const { bookedDates, bookedReservationDates, ...storedProperty } = item;
-    batch.set(doc(db, 'properties', id), storedProperty);
+    queueWrite(current => current.set(doc(db, 'properties', id), storedProperty));
   }
   for (const id of oldProperties.keys()) if (!newProperties.has(id)) {
     const previous = oldProperties.get(id);
     if (!admin && previous.ownerId !== user?.uid) throw new Error('Você só pode remover acomodações da sua conta.');
-    batch.delete(doc(db, 'properties', id));
+    queueWrite(current => current.delete(doc(db, 'properties', id)));
   }
 
   for (const [id, item] of newReservations) {
@@ -161,9 +170,9 @@ async function persist(next) {
       if (!user) throw new Error('Entre na sua conta para registrar uma estadia.');
       item.userId = user.uid;
       item.propertyOwnerId = newProperties.get(item.propertyId)?.ownerId || '';if(item.source==='host'&&!(admin||item.propertyOwnerId===user.uid))throw new Error('Você só pode registrar locações dos seus imóveis.');
-      batch.set(doc(db, 'reservations', id), item);
+      queueWrite(current => current.set(doc(db, 'reservations', id), item));
       window.Living.range(item.checkIn, item.checkOut).forEach(day => {
-        batch.set(doc(db, 'availability', `${item.propertyId}_${day}`), { propertyId: item.propertyId, date: day, reservationId: id });
+        queueWrite(current => current.set(doc(db, 'availability', `${item.propertyId}_${day}`), { propertyId: item.propertyId, date: day, reservationId: id }));
       });
     } else if (admin || (item.propertyOwnerId === user?.uid) || (item.userId === user?.uid && item.status === 'cancelada')) {
       const hostCreatedRental = item.source === 'host' && item.propertyOwnerId === user?.uid && old.source === 'host';
@@ -175,9 +184,9 @@ async function persist(next) {
         const cpfEdit = old.stage === 2 && item.stage === 2 && item.status === old.status && changed.every(key => key === 'cpf');
         if (!(identityApproval || contractUpload || keysStep || cpfEdit)) throw new Error('Esta etapa não pode ser alterada por este usuário.');
       }
-      batch.set(doc(db, 'reservations', id), item);
+      queueWrite(current => current.set(doc(db, 'reservations', id), item));
       if (item.status === 'cancelada' && old.status !== 'cancelada') {
-        window.Living.range(old.checkIn, old.checkOut).forEach(day => batch.delete(doc(db, 'availability', `${old.propertyId}_${day}`)));
+        window.Living.range(old.checkIn, old.checkOut).forEach(day => queueWrite(current => current.delete(doc(db, 'availability', `${old.propertyId}_${day}`))));
       }
     } else {
       throw new Error('Você não tem permissão para alterar esta estadia.');
@@ -186,16 +195,19 @@ async function persist(next) {
   for (const id of oldReservations.keys()) if (!newReservations.has(id)) {
     if (!admin) throw new Error('Os registros de estadia não podem ser removidos.');
     const old = oldReservations.get(id);
-    window.Living.range(old.checkIn, old.checkOut).forEach(day => batch.delete(doc(db, 'availability', `${old.propertyId}_${day}`)));
-    batch.delete(doc(db, 'reservations', id));
+    window.Living.range(old.checkIn, old.checkOut).forEach(day => queueWrite(current => current.delete(doc(db, 'availability', `${old.propertyId}_${day}`))));
+    queueWrite(current => current.delete(doc(db, 'reservations', id)));
   }
 
-  for (const id of newFavorites) if (!oldFavorites.has(id) && user) batch.set(doc(db, 'users', user.uid, 'favorites', id), { propertyId: id });
-  for (const id of oldFavorites) if (!newFavorites.has(id) && user) batch.delete(doc(db, 'users', user.uid, 'favorites', id));
+  for (const id of newFavorites) if (!oldFavorites.has(id) && user) queueWrite(current => current.set(doc(db, 'users', user.uid, 'favorites', id), { propertyId: id }));
+  for (const id of oldFavorites) if (!newFavorites.has(id) && user) queueWrite(current => current.delete(doc(db, 'users', user.uid, 'favorites', id)));
 
   if ([...oldProperties.keys(), ...newProperties.keys()].some(id => !same(oldProperties.get(id), newProperties.get(id))) ||
       [...oldReservations.keys(), ...newReservations.keys()].some(id => !same(oldReservations.get(id), newReservations.get(id))) ||
-      (user && (oldFavorites.size !== newFavorites.size || [...oldFavorites].some(id => !newFavorites.has(id))))) await batch.commit();
+      (user && (oldFavorites.size !== newFavorites.size || [...oldFavorites].some(id => !newFavorites.has(id))))) {
+    if (batchWrites) batches.push(batch);
+    for (const pendingBatch of batches) await pendingBatch.commit();
+  }
   cloud = clone({ properties: next.properties, reservations: next.reservations, favorites: next.favorites });
   // A successful write must not become a failed reservation just because a
   // subsequent refresh lost its connection. Listeners will reconcile the data.
